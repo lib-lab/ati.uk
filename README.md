@@ -37,7 +37,7 @@ src/
 docs/           ТЗ, план, решения, роадмап
 ```
 
-Решения и допущения описаны в [docs/DECISIONS.md](docs/DECISIONS.md), утверждённый план — в [docs/PLAN.md](docs/PLAN.md).
+Решения и допущения описаны в [docs/DECISIONS.md](docs/DECISIONS.md), утверждённый план — в [docs/PLAN.md](docs/PLAN.md), оставшиеся этапы с критериями готовности — в [docs/ROADMAP.md](docs/ROADMAP.md). Правила работы с репозиторием для следующих сессий — в [CLAUDE.md](CLAUDE.md).
 
 ## Реализованные сценарии
 
