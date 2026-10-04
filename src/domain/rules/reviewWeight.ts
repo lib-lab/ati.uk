@@ -13,7 +13,10 @@ export interface ReviewWeight {
   recency: number;
   contactCost: number;
   author: number;
+  /** Small closed group. */
   independence: number;
+  /** Mutual reviews of companies sharing an IP/device. */
+  sharedDevice: number;
   total: number;
 }
 
@@ -21,10 +24,18 @@ export function recencyWeight(review: Pick<Review, 'createdAt'>, now: IsoDate): 
   return monthsBetween(review.createdAt, now) > W.oldAfterMonths ? W.oldWeight : 1;
 }
 
+/** The contact between two companies, in either direction (the author's own opening preferred). */
+export function contactBetween(input: Pick<AppState, 'contactAccesses'>, authorId: Id, targetId: Id) {
+  return (
+    input.contactAccesses.find((a) => a.viewerId === authorId && a.ownerId === targetId) ??
+    input.contactAccesses.find((a) => a.viewerId === targetId && a.ownerId === authorId)
+  );
+}
+
 /** Full weight after a paid contact; less after a free one (open listing) or a refunded one. */
-export function contactCostWeight(input: Pick<AppState, 'contactAccesses'>, review: Review): number {
-  const access = input.contactAccesses.find((a) => a.viewerId === review.authorId && a.ownerId === review.targetId);
-  if (!access) return W.contactCost.open_listing; // should not happen: reviews need an opened contact
+export function contactCostWeight(input: Pick<AppState, 'contactAccesses'>, review: Pick<Review, 'authorId' | 'targetId'>): number {
+  const access = contactBetween(input, review.authorId, review.targetId);
+  if (!access) return W.contactCost.open_listing; // should not happen: reviews need a contact between the parties
   if (access.refundedAt) return W.contactCost.refunded;
   return W.contactCost[access.paidWith];
 }
@@ -101,14 +112,30 @@ export function closedShare(input: Pick<AppState, 'reviews' | 'contactAccesses' 
 }
 
 /** True when the review is inside a small closed group. */
-export function isInClosedGroup(input: Pick<AppState, 'reviews' | 'contactAccesses' | 'claims'>, review: Review): boolean {
+export function isInClosedGroup(input: Pick<AppState, 'reviews' | 'contactAccesses' | 'claims'>, review: Pick<Review, 'authorId' | 'targetId'>): boolean {
   const g = reviewGroup(input, review.authorId, review.targetId);
   const ind = W.independence;
   return g.members.length <= ind.maxGroupSize && g.closedShare >= ind.closedShare;
 }
 
-export function independenceWeight(input: Pick<AppState, 'reviews' | 'contactAccesses' | 'claims'>, review: Review): number {
+export function independenceWeight(input: Pick<AppState, 'reviews' | 'contactAccesses' | 'claims'>, review: Pick<Review, 'authorId' | 'targetId'>): number {
   return isInClosedGroup(input, review) ? W.independence.groupWeight : 1;
+}
+
+export function sharesDevice(input: Pick<AppState, 'companies'>, a: Id, b: Id): boolean {
+  const ca = input.companies.find((c) => c.id === a);
+  const cb = input.companies.find((c) => c.id === b);
+  return !!ca && !!cb && ca.deviceId === cb.deviceId;
+}
+
+/**
+ * A shared IP/device alone is normal (business centres, holdings, dispatch outsourcing) and gives
+ * no flag; it only lowers the weight of mutual reviews between those companies.
+ */
+export function sharedDeviceWeight(input: Pick<AppState, 'companies' | 'reviews'>, review: Pick<Review, 'authorId' | 'targetId'>): number {
+  if (!sharesDevice(input, review.authorId, review.targetId)) return 1;
+  const mutual = input.reviews.some((r) => r.authorId === review.targetId && r.targetId === review.authorId && !r.voided);
+  return mutual ? W.independence.sharedDeviceMutualWeight : 1;
 }
 
 export function reviewWeight(input: WeightInput, review: Review, now: IsoDate): ReviewWeight {
@@ -116,5 +143,12 @@ export function reviewWeight(input: WeightInput, review: Review, now: IsoDate): 
   const contactCost = contactCostWeight(input, review);
   const author = authorWeight(input, review.authorId, now);
   const independence = independenceWeight(input, review);
-  return { recency, contactCost, author, independence, total: recency * contactCost * author * independence };
+  const sharedDevice = sharedDeviceWeight(input, review);
+  return { recency, contactCost, author, independence, sharedDevice, total: recency * contactCost * author * independence * sharedDevice };
+}
+
+/** Weight of a claim: the same factors as a review, without recency (TZ: "weight as a review"). */
+export function interactionWeight(input: WeightInput, authorId: Id, targetId: Id, now: IsoDate): number {
+  const pair = { authorId, targetId };
+  return contactCostWeight(input, pair) * authorWeight(input, authorId, now) * independenceWeight(input, pair);
 }

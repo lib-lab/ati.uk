@@ -60,9 +60,11 @@ export function matchesFilters(listing: Listing, f: SearchFilters, ratingOf?: Ra
   if (!inRange(listing.weightT, f.weightMin, f.weightMax)) return false;
   if (!inRange(listing.volumeM3, f.volumeMin, f.volumeMax)) return false;
   if (f.loadingMethods?.length && !listing.loadingMethods.some((m) => f.loadingMethods!.includes(m))) return false;
-  if (ratingOf && (f.minRating !== undefined || f.noRedFlags)) {
+  if (ratingOf && (f.minRating !== undefined || f.noRedFlags || f.onlyRated)) {
     const r = ratingOf(listing.ownerId);
-    if (f.minRating !== undefined && r.score < f.minRating) return false;
+    // New members have no rating yet: the minimum does not cut them, "only rated" does (TZ).
+    if (f.onlyRated && r.isNewMember) return false;
+    if (f.minRating !== undefined && !r.isNewMember && r.score < f.minRating) return false;
     if (f.noRedFlags && r.redFlags.length > 0) return false;
   }
   return true;

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buyPriority, extendListing, makeListingOpen, removeListing } from '../../domain/commands/listings';
-import { confirmContactData } from '../../domain/commands/moderation';
+import { confirmContactData, respondToComplaint } from '../../domain/commands/moderation';
+import { DisputeButton } from '../components/DisputeButton';
 import type { CommandResult } from '../../domain/commands/result';
 import { CONFIG } from '../../domain/config';
 import { isExpired } from '../../domain/rules/lifetime';
@@ -39,6 +40,7 @@ export function MyListingsPage() {
           <button className="btn btn-small" onClick={() => store.run(confirmContactData)}>{t('my.confirmContact')}</button>
         </div>
       )}
+      <ComplaintsAboutMe state={state} companyId={owner.id} />
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'active'} className={tab === 'active' ? 'tab active' : 'tab'} onClick={() => setTab('active')}>
           {t('my.tab.active', { count: active.length })}
@@ -151,5 +153,47 @@ function MyListingRow({ state, listing: l }: { state: AppState; listing: Listing
         </p>
       )}
     </li>
+  );
+}
+
+/** Complaints about the owner's listings: answer before the decision, dispute after it (TZ). */
+function ComplaintsAboutMe({ state, companyId }: { state: AppState; companyId: string }) {
+  const items = state.complaints.filter((c) => c.targetId === companyId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (items.length === 0) return null;
+  return (
+    <>
+      <h2>{t('my.complaints', { count: items.length })}</h2>
+      <ul className="list">
+        {items.map((c) => (
+          <li key={c.id} className="list-item review">
+            <div>
+              <strong>{t(`complaintType.${c.type}`)}</strong> · <Link to={`/listing/${c.listingId}`}>{c.listingId}</Link>{' '}
+              <span className="muted small">{formatDate(c.createdAt)}</span>{' '}
+              <span className={`badge ${c.status === 'confirmed' ? 'badge-red' : 'badge-neutral'}`}>{t(`complaintStatus.${c.status}`)}</span>
+            </div>
+            {c.response && <div className="reply small"><span className="muted">{t('my.yourAnswer')}</span> {c.response.text}</div>}
+            <div className="inline">
+              {c.status === 'pending' && !c.response && <ComplaintAnswer id={c.id} />}
+              <DisputeButton state={state} type="complaint" subjectId={c.id} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function ComplaintAnswer({ id }: { id: string }) {
+  const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span className="inline reply-form">
+      <input id={`answer-${id}`} placeholder={t('my.answerPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
+      <button className="btn btn-small" onClick={() => {
+        const res = store.run((s) => respondToComplaint(s, id, text));
+        if (!res.ok) setError(t(`error.${res.error}`));
+      }}>{t('my.answer')}</button>
+      {error && <span className="field-error">{error}</span>}
+    </span>
   );
 }

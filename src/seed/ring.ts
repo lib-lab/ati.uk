@@ -52,7 +52,7 @@ export function buildRing(now: string, joinedAt: (id: string) => string): RingSe
       const txId = `tr${n}`;
       debits.push({ id: txId, companyId: a.id, type: 'contact', amount: -CONFIG.prices.contact, createdAt: openedAt, refId: accessId });
       accesses.push({ id: accessId, viewerId: a.id, ownerId: b.id, firstListingId: `lr-${b.id}`, openedAt, paidWith: 'balance', transactionId: txId });
-      reviews.push({ id: `rr${n}`, authorId: a.id, targetId: b.id, stars: 5, text: 'Perfect partner, highly recommended.', createdAt: addDays(openedAt, 1) });
+      reviews.push({ id: `rr${n}`, authorId: a.id, targetId: b.id, stars: 5, dealHappened: true, text: 'Perfect partner, highly recommended.', createdAt: addDays(openedAt, 1) });
     }
   }
   const transactions: LedgerTransaction[] = RING_SPECS.map((s) => ({

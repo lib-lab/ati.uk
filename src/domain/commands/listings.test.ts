@@ -120,17 +120,11 @@ describe('removeListing', () => {
     expect(removeListing(r.state, l.id, 'not_relevant')).toEqual({ ok: false, error: 'listing_not_active' });
   });
 
-  it('"found on the platform" feeds the activity component and is logged as a rating change', () => {
-    // 3 past removals "not relevant" → found share 0. Removing a listing as found → share 1/4.
-    const past = (id: string) => cargo(id, 'o', { status: 'removed', removalReason: 'not_relevant', createdAt: addDays(NOW, -200) });
-    let [s, l] = posted({ ...base(), listings: [past('p1'), past('p2'), past('p3')] });
-    const r = removeListing(s, l.id, 'found_on_platform');
+  it('the removal reason is a metric only: it does not change the rating (TZ)', () => {
+    const [s0, l] = posted(base());
+    const r = removeListing(s0, l.id, 'found_on_platform');
     if (!r.ok) throw new Error(r.error);
-    s = r.state;
-    const ev = s.events.find((e) => e.type === 'rating_changed' && e.reasonKey === 'event.rating.removed.found_on_platform');
-    expect(ev?.subjectIds).toEqual(['o']);
-    expect(ev?.rating?.components.map((c) => c.key)).toEqual(['activity']);
-    expect(ev!.rating!.after).toBeGreaterThan(ev!.rating!.before);
+    expect(r.state.events.some((e) => e.type === 'rating_changed')).toBe(false);
   });
 });
 

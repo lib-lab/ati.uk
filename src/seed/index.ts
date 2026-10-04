@@ -27,7 +27,7 @@ import { createRng, type Rng } from './random';
 import { buildRing, RING_SPECS } from './ring';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 
@@ -116,12 +116,18 @@ export function buildSeedState(): AppState {
   // ----- flags -----
   const flags: Flag[] = [];
   const addFlag = (companyId: string, kind: Flag['kind'], source: Flag['source'], createdAt: IsoDate, note?: string) =>
-    flags.push({ id: nextId('f', 'flag', 2), companyId, kind, level: FLAG_LEVEL[kind], source, createdAt, note });
+    flags.push({
+      id: nextId('f', 'flag', 2), companyId, kind, level: FLAG_LEVEL[kind], source, createdAt, note,
+      dueAt: kind === 'data_mismatch' ? addDays(createdAt, CONFIG.dataMismatchGraceDays) : undefined,
+    });
   for (const c of companies) {
-    for (const kind of flagKindsFromVerification(c.verification)) addFlag(c.id, kind, 'registry', c.verification.checkedAt);
+    for (const kind of flagKindsFromVerification(c.verification)) {
+      // The mismatch was found 5 days ago: yellow "Clarify your data" for 9 more days, then red.
+      const at = kind === 'data_mismatch' ? addDays(now, -5) : c.verification.checkedAt;
+      addFlag(c.id, kind, 'registry', at);
+    }
   }
-  addFlag('c13', 'suspected_linked', 'detector', addDays(now, -6), 'Shared device with c14, mutual reviews');
-  addFlag('c14', 'suspected_linked', 'detector', addDays(now, -6), 'Shared device with c13, mutual reviews');
+  // c13/c14 share a device: no flag (TZ), their mutual reviews just weigh less.
   addFlag('c18', 'fraud_blocked', 'moderator', addDays(now, -15), 'Confirmed fraud: fake cargo listings');
 
   // ----- contact accesses (+ their payments) -----
@@ -153,8 +159,11 @@ export function buildSeedState(): AppState {
   const addReview = (authorId: string, targetId: string, stars: Review['stars'], createdAt: IsoDate) => {
     const openedAt = addDays(createdAt, -rng.int(1, 10));
     ensureAccess(authorId, targetId, openedAt);
+    const id = nextId('r', 'review', 3);
     reviews.push({
-      id: nextId('r', 'review', 3), authorId, targetId, stars, createdAt,
+      id, authorId, targetId, stars, createdAt,
+      // Deterministic, without the PRNG: every fifth review is about the contact only (no deal).
+      dealHappened: counters.review % 5 !== 0,
       text: rng.pick(REVIEW_TEXTS[stars] ?? ['']),
     });
   };
@@ -200,17 +209,18 @@ export function buildSeedState(): AppState {
     ensureAccess(claimantId, targetId, addDays(createdAt, -5));
     claims.push({
       id: nextId('cl', 'claim', 2), claimantId, targetId, text, status, createdAt,
-      resolvedAt: status === 'open' ? undefined : addDays(createdAt, 10),
+      confirmedAt: status === 'confirmed' ? addDays(createdAt, 3) : undefined,
+      resolvedAt: status === 'settled' || status === 'rejected' ? addDays(createdAt, 10) : undefined,
     });
   };
   addClaim('c03', 'c09', 'open', 20, 'Cargo delivered damaged, compensation not paid.');
   addClaim('c05', 'c09', 'open', 8, 'Truck did not arrive for loading, no notice.');
-  addClaim('c02', 'c10', 'open', 30, 'Freight not paid 45 days after delivery.');
+  addClaim('c02', 'c10', 'confirmed', 45, 'Freight not paid 45 days after delivery.');
   addClaim('c01', 'c16', 'settled', 120, 'Late payment.');
   addClaim('c10', 'c16', 'rejected', 60, 'Disputed waiting time charge.');
   addClaim('c09', 'c01', 'settled', 200, 'Invoice mismatch.');
   addClaim('c15', 'c18', 'open', 25, 'Paid deposit, truck never came.');
-  addClaim('c03', 'c18', 'open', 22, 'Fake cargo offer, contact disappeared.');
+  addClaim('c03', 'c18', 'open', 40, 'Fake cargo offer, contact disappeared.'); // unconfirmed > 30 days: no longer counts
 
   // ----- listings -----
   const listings: Listing[] = [];
@@ -299,6 +309,7 @@ export function buildSeedState(): AppState {
     claims,
     complaints: [],
     flags,
+    disputes: [],
     subscriptions: [],
     notifications: [],
     templates: [],

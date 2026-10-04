@@ -112,7 +112,7 @@ export function removeListing(state: AppState, listingId: Id, reason: RemovalRea
     reasonKey: `event.listing.removed.${reason}`,
     params: { listing: l.id, route: routeLabel(l) },
   });
-  s = withRatingEvents(state, s, { reasonKey: `event.rating.removed.${reason}`, params: { listing: l.id }, actor: l.ownerId });
+  // The removal reason is a metric only and does not enter the rating (TZ).
   return { ok: true, state: s };
 }
 

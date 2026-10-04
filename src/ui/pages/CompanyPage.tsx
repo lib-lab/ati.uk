@@ -1,17 +1,19 @@
 import { Link, useParams } from 'react-router-dom';
 import { activeFlags } from '../../domain/rules/flags';
-import { countedReviews } from '../../domain/rules/rating';
-import { reviewWeight } from '../../domain/rules/reviewWeight';
-import { canReply, canSettleClaim } from '../../domain/rules/reviews';
+import { activeClaims, countedReviews } from '../../domain/rules/rating';
+import { interactionWeight, reviewWeight } from '../../domain/rules/reviewWeight';
+import { canReply, canReplyToClaim, canSettleClaim } from '../../domain/rules/reviews';
+import { fixProfileData } from '../../domain/commands/moderation';
 import { explainRating, type ComponentExplanation } from '../../domain/rules/ratingExplain';
 import type { AppState, Claim, Review } from '../../domain/types';
-import { useAppState } from '../../store/store';
-import { FlagBadge } from '../components/FlagBadge';
+import { store, useAppState } from '../../store/store';
+import { DisputeButton } from '../components/DisputeButton';
+import { FlagBadge, flagLabel } from '../components/FlagBadge';
 import { MarkBadges } from '../components/OwnerSummary';
-import { ClaimForm, ReplyForm, ReviewForm, SettleButton } from '../components/ReputationForms';
+import { ClaimForm, ClaimReplyForm, ReplyForm, ReviewForm, SettleButton } from '../components/ReputationForms';
 import { formatDate, formatDateTime } from '../format';
 import { t } from '../i18n';
-import { companyName, eventText } from '../eventText';
+import { companyName, eventText, readableParams } from '../eventText';
 import { getCompany, getRating } from '../selectors';
 
 export function CompanyPage() {
@@ -36,7 +38,7 @@ export function CompanyPage() {
           <div className="muted">
             {t(`role.${company.role}`)} · {company.country} · {company.regNumberType} {company.regNumber} ·{' '}
             {t('company.joined', { date: formatDate(company.joinedAt) })}
-            {company.status === 'deactivated' && <> · <strong>{t('company.deactivated')}</strong></>}
+            {company.status === 'deactivated' && <> · <strong>{t('company.hiddenInactive')}</strong></>}
           </div>
           <div className="badges">
             <MarkBadges rating={rating} company={company} />
@@ -49,8 +51,17 @@ export function CompanyPage() {
         <ul className="flag-notes">
           {flags.map((f) => (
             <li key={f.id} className={f.level === 'red' ? 'alert alert-red' : 'alert alert-yellow'}>
-              <strong>{t(`flag.${f.kind}`)}</strong> — {t(`flagInfo.${f.kind}`)}
-              {f.note && <span className="muted"> ({f.note})</span>} · {formatDate(f.createdAt)}
+              <strong>{flagLabel(f)}</strong> —{' '}
+              {f.kind === 'data_mismatch' && f.level === 'yellow'
+                ? t('flagInfo.data_mismatch.yellow', { date: formatDate(f.dueAt ?? f.createdAt) })
+                : t(`flagInfo.${f.kind}`)}
+              {f.note && <span className="muted"> ({f.note})</span>} · {formatDate(f.createdAt)}{' '}
+              {f.kind === 'data_mismatch' && state.actorId === company.id && company.verification.record && (
+                <button className="btn btn-small" onClick={() => store.run(fixProfileData)}>
+                  {t('company.fixData', { name: company.verification.record.legalName })}
+                </button>
+              )}{' '}
+              <DisputeButton state={state} type="flag" subjectId={f.id} />
             </li>
           ))}
         </ul>
@@ -81,9 +92,9 @@ export function CompanyPage() {
         {record ? (
           <dl className="facts">
             <dt>{t('company.registry.name')}</dt><dd>{record.legalName}</dd>
-            <dt>{t('company.registry.status')}</dt><dd>{t(`registryStatus.${record.status}`)}</dd>
-            <dt>{t('company.registry.founded')}</dt><dd>{formatDate(record.foundedAt)}</dd>
-            <dt>{t('company.registry.reports')}</dt><dd>{record.reportsFiled ? t('common.yes') : t('common.no')}</dd>
+            <dt>{t('company.registry.status')}</dt><dd>{record.status ? t(`registryStatus.${record.status}`) : t('company.registry.statusUnavailable')}</dd>
+            <dt>{t('company.registry.founded')}</dt><dd>{formatDate(record.foundedAt)} <span className="muted small">{t('company.registry.notScored')}</span></dd>
+            <dt>{t('company.registry.reports')}</dt><dd>{record.reportsFiled ? t('common.yes') : t('common.no')} <span className="muted small">{t('company.registry.notScored')}</span></dd>
             <dt>{t('company.registry.address')}</dt><dd>{record.address}</dd>
             <dt>{t('company.registry.match')}</dt>
             <dd>{company.verification.matchesProfile ? t('common.yes') : t('company.registry.mismatch', { profile: company.legalName })}</dd>
@@ -115,7 +126,7 @@ function ComponentPanel({ state, companyId, c }: { state: AppState; companyId: s
         <tbody>
           {c.lines.map((l, i) => (
             <tr key={i}>
-              <td>{t(l.key, l.params)}</td>
+              <td>{t(l.key, readableParams(state, l.params))}</td>
               <td className="num nowrap">{l.points === null ? '' : `${l.points >= 0 ? '+' : '−'}${Math.abs(l.points).toFixed(1)}`}</td>
             </tr>
           ))}
@@ -132,7 +143,8 @@ function ComponentPanel({ state, companyId, c }: { state: AppState; companyId: s
               return (
                 <li key={e.id}>
                   <span className="muted">{formatDate(e.at)}</span> {eventText(state, e)}:{' '}
-                  {fmt(change.before)} → {fmt(change.after)} ({signed(change.contributionDelta)} {t('company.pts')})
+                  {fmt(change.before)} → {fmt(change.after)} ({signed(change.contributionDelta)} {t('company.pts')}){' '}
+                  <DisputeButton state={state} type="event" subjectId={e.id} />
                 </li>
               );
             })}
@@ -151,6 +163,7 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
     w.contactCost < 1 && t('company.review.factor.free', { w: w.contactCost }),
     w.author < 1 && t('company.review.factor.author', { w: w.author.toFixed(2) }),
     w.independence < 1 && t('company.review.factor.group', { w: w.independence }),
+    w.sharedDevice < 1 && t('company.review.factor.device', { w: w.sharedDevice }),
   ].filter(Boolean);
   return (
     <li className="list-item review">
@@ -158,6 +171,7 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
         <span className="stars" aria-label={t('company.stars', { stars: review.stars })}>{'★'.repeat(review.stars)}{'☆'.repeat(5 - review.stars)}</span>{' '}
         <Link to={`/company/${review.authorId}`}>{companyName(state, review.authorId)}</Link>{' '}
         <span className="muted small">{formatDate(review.createdAt)}</span>
+        {!review.dealHappened && <span className="badge badge-neutral">{t('company.review.contactOnly')}</span>}
         {review.voided && <span className="badge badge-neutral">{t('company.review.voided')}</span>}
         {!review.voided && !counted && <span className="badge badge-yellow">{t('company.review.notCounted')}</span>}
         {counted && (
@@ -175,18 +189,27 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
 }
 
 function ClaimItem({ state, claim }: { state: AppState; claim: Claim }) {
+  const counting = activeClaims(state, claim.targetId, state.now).some((c) => c.id === claim.id);
+  const weight = interactionWeight(state, claim.claimantId, claim.targetId, state.now);
   return (
     <li className="list-item review">
       <div>
-        <span className={`badge ${claim.status === 'open' ? 'badge-red' : 'badge-neutral'}`}>{t(`claimStatus.${claim.status}`)}</span>{' '}
+        <span className={`badge ${counting ? 'badge-red' : 'badge-neutral'}`}>{t(`claimStatus.${claim.status}`)}</span>{' '}
         <Link to={`/company/${claim.claimantId}`}>{companyName(state, claim.claimantId)}</Link>{' '}
         <span className="muted small">
           {formatDate(claim.createdAt)}
           {claim.resolvedAt && ` → ${formatDate(claim.resolvedAt)}`}
-        </span>
+        </span>{' '}
+        {counting && <span className="badge badge-neutral">{t('company.claim.weight', { w: weight.toFixed(2) })}</span>}
+        {claim.status === 'open' && !counting && <span className="badge badge-neutral">{t('company.claim.expired')}</span>}
       </div>
       <div>{claim.text}</div>
-      {canSettleClaim(claim, state.actorId) && <div><SettleButton claim={claim} /></div>}
+      {claim.reply && <div className="reply small"><span className="muted">{t('company.review.reply')}</span> {claim.reply.text}</div>}
+      <div className="inline">
+        {canReplyToClaim(claim, state.actorId) && <ClaimReplyForm claim={claim} />}
+        {canSettleClaim(claim, state.actorId) && <SettleButton claim={claim} />}
+        <DisputeButton state={state} type="claim" subjectId={claim.id} />
+      </div>
     </li>
   );
 }

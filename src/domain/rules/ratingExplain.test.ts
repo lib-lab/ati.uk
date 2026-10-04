@@ -22,10 +22,20 @@ describe('explainRating', () => {
     expect(Math.round(total)).toBe(ex.score);
   });
 
-  it('explains the claims penalty (Danube Haulage: 2 open claims → 50)', () => {
+  it('explains each claim with its weight (Danube Haulage: 2 recent open claims)', () => {
     const claims = explainRating(seed, 'c09', seed.now).components.find((c) => c.key === 'claims')!;
-    expect(claims.value).toBe(50);
-    expect(claims.lines.find((l) => l.key === 'explain.claims.open')).toMatchObject({ params: { count: 2 }, points: -50 });
+    const open = claims.lines.filter((l) => l.key === 'explain.claims.open');
+    expect(open).toHaveLength(2);
+    for (const l of open) {
+      expect(l.points!).toBeLessThan(0);
+      expect(l.points!).toBeGreaterThanOrEqual(-25);
+    }
+    expect(claims.value!).toBeLessThan(100);
+  });
+
+  it('an unconfirmed claim older than 30 days is listed as no longer counting (Fast Profit Freight)', () => {
+    const claims = explainRating(seed, 'c18', seed.now).components.find((c) => c.key === 'claims')!;
+    expect(claims.lines.map((l) => l.key)).toContain('explain.claims.expired');
   });
 
   it('newcomer: reviews and activity unavailable, weights 60/40', () => {
@@ -38,8 +48,9 @@ describe('explainRating', () => {
     expect(by.activity!.lines[0]!.key).toBe('explain.activity.tooNew');
   });
 
-  it('linked accounts: the mutual review is reported as not counted', () => {
+  it('a shared device: the mutual review counts with reduced weight, no flag', () => {
     const reviews = explainRating(seed, 'c13', seed.now).components.find((c) => c.key === 'reviews')!;
-    expect(reviews.lines.map((l) => l.key)).toContain('explain.reviews.flaggedAuthors');
+    expect(reviews.lines.map((l) => l.key)).toContain('explain.reviews.sharedDevice');
+    expect(reviews.lines.map((l) => l.key)).not.toContain('explain.reviews.flaggedAuthors');
   });
 });

@@ -18,14 +18,19 @@ export function lastReview(input: Pick<AppState, 'reviews'>, authorId: Id, targe
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 }
 
+/** True when one of the two companies opened the other's contact (either direction). */
+export function areContactParties(input: Pick<AppState, 'contactAccesses'>, a: Id, b: Id): boolean {
+  return !!findAccess(input, a, b) || !!findAccess(input, b, a);
+}
+
 /**
- * Review only after opening the target's contact, and at most once per 90 days
- * for the directed pair author → target.
+ * Both sides of a contact may review each other (the one who opened it and the one whose contact
+ * was opened), at most once per 90 days per directed pair author → target.
  */
 export function canReview(input: ReviewInput, authorId: Id, targetId: Id, now: IsoDate): Eligibility {
   if (!input.companies.some((c) => c.id === authorId)) return { ok: false, reason: 'not_company' };
   if (authorId === targetId) return { ok: false, reason: 'self' };
-  if (!findAccess(input, authorId, targetId)) return { ok: false, reason: 'no_access' };
+  if (!areContactParties(input, authorId, targetId)) return { ok: false, reason: 'no_access' };
   const last = lastReview(input, authorId, targetId);
   if (last) {
     const nextAt = addDays(last.createdAt, CONFIG.reviews.minDaysBetweenPerPair);
@@ -39,15 +44,22 @@ export function canReply(review: Review, actorId: Id): boolean {
   return review.targetId === actorId && !review.reply;
 }
 
-/** Claims need an opened contact too (the parties must have been in touch). */
+/** Only a side of a contact may file a claim (TZ). */
 export function canFileClaim(input: ReviewInput, claimantId: Id, targetId: Id): Eligibility {
   if (!input.companies.some((c) => c.id === claimantId)) return { ok: false, reason: 'not_company' };
   if (claimantId === targetId) return { ok: false, reason: 'self' };
-  if (!findAccess(input, claimantId, targetId)) return { ok: false, reason: 'no_access' };
+  if (!areContactParties(input, claimantId, targetId)) return { ok: false, reason: 'no_access' };
   return { ok: true };
 }
 
-/** The claimant (or the moderator) marks an open claim as settled. Rejecting is for the moderator only. */
+const isLive = (claim: Claim) => claim.status === 'open' || claim.status === 'confirmed';
+
+/** The claimant (or the moderator) marks a claim as settled. Rejecting is for the moderator only. */
 export function canSettleClaim(claim: Claim, actorId: Id): boolean {
-  return claim.status === 'open' && (claim.claimantId === actorId || actorId === 'moderator');
+  return isLive(claim) && (claim.claimantId === actorId || actorId === 'moderator');
+}
+
+/** The accused company answers once. */
+export function canReplyToClaim(claim: Claim, actorId: Id): boolean {
+  return claim.targetId === actorId && !claim.reply;
 }

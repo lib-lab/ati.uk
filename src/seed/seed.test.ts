@@ -79,9 +79,10 @@ describe('seed', () => {
     const red = (id: string) => activeFlags(state.flags, id).filter((f) => f.level === 'red').map((f) => f.kind);
     const yellow = (id: string) => activeFlags(state.flags, id).filter((f) => f.level === 'yellow').map((f) => f.kind);
     expect(red('c11')).toContain('liquidated');
-    expect(red('c12')).toContain('data_mismatch');
+    expect(yellow('c12')).toEqual(['data_mismatch']); // red after the 14-day grace period
     expect(red('c18')).toContain('fraud_blocked');
-    expect(yellow('c13')).toEqual(['suspected_linked']);
+    expect(yellow('c13')).toEqual([]); // a shared device gives no flag
+    expect(state.companies.find((c) => c.id === 'c08')!.verification.record!.status).toBeUndefined();
     expect(state.reviews.filter((r) => r.targetId === 'c06')).toHaveLength(0);
     expect(state.reviews.filter((r) => r.targetId === 'c07')).toHaveLength(1);
     expect(state.claims.filter((c) => c.targetId === 'c09' && c.status === 'open')).toHaveLength(2);

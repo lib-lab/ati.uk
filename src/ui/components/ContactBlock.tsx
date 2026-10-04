@@ -10,6 +10,7 @@ import { store } from '../../store/store';
 import { formatDate, formatMoney } from '../format';
 import { t } from '../i18n';
 import { getCompany } from '../selectors';
+import { flagLabel } from './FlagBadge';
 
 export function ContactBlock({ state, listing, ownerRating }: { state: AppState; listing: Listing; ownerRating: Rating }) {
   const [confirming, setConfirming] = useState(false);
@@ -76,7 +77,7 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
 
   return (
     <div className="contact">
-      {redFlag && <p className="alert alert-red">{t('contact.redWarning', { flag: t(`flag.${redFlag.kind}`) })}</p>}
+      {redFlag && <p className="alert alert-red">{t('contact.redWarning', { flag: flagLabel(redFlag) })}</p>}
       {!redFlag && yellowFlag && <p className="alert alert-yellow">{t('contact.yellowNote')}</p>}
       {confirming ? (
         <div className="inline">

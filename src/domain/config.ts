@@ -28,50 +28,58 @@ export const CONFIG = {
       oldWeight: 0.5,
       /** Neutral prior added to every average: a few low-weight reviews cannot reach the top. [A] */
       prior: { stars: 3, weight: 1 },
-      /** How the author got the contact. Free (open listing) or refunded contacts weigh less. [A] */
+      /** How the contact was obtained. Free (open listing) or refunded contacts weigh less. [A] */
       contactCost: { balance: 1, package: 1, free_quota: 1, open_listing: 0.5, refunded: 0.5 },
       /** Author standing grows with tenure and activity (listings posted + contacts opened). [A] */
       author: { minWeight: 0.3, fullTenureMonths: 12, fullActivity: 20, tenureShare: 0.5 },
       /**
        * Independence: the group of a review A→B is A, B and their common review partners.
        * If the group is small and most of its members' interactions stay inside it, reviews
-       * within the group weigh less. [A]
+       * within the group weigh less. A shared IP/device lowers mutual reviews only. [A]
        */
-      independence: { maxGroupSize: 6, closedShare: 0.8, groupWeight: 0.3 },
+      independence: { maxGroupSize: 6, closedShare: 0.8, groupWeight: 0.3, sharedDeviceMutualWeight: 0.3 },
     },
     verification: {
-      // shares inside the component, sum = 1  [A]
-      activeStatus: 0.4,
-      age: 0.25,
-      reports: 0.15,
-      profileMatch: 0.2,
-      ageFullYears: 5,
-      ageZeroYears: 1,
+      // Checks that the registry provides; unavailable checks are left out (do not lower the score). [A]
+      shares: { activeStatus: 0.5, profileMatch: 0.5 },
     },
-    claims: { penaltyPerOpenClaim: 25 }, // [A]
+    claims: {
+      penaltyPerClaim: 25, // [A] per claim of full weight
+      /** An open claim not confirmed by the moderator stops counting after this many days (TZ). */
+      unconfirmedExpiryDays: 30,
+    },
     activity: {
       availableAfterDays: 30, // [A]
-      tenure: 0.5,
-      regularity: 0.3,
-      foundShare: 0.2,
-      tenureFullMonths: 24,
-      regularityWindowDays: 90,
-      regularityFullCount: 10,
-      foundShareMinRemovals: 3,
+      tenureShare: 0.5, // [A] the rest: contacts that later received reviews
+      tenureFullMonths: 24, // [A]
+      reviewedContactsFull: 10, // [A]
     },
   },
 
   reviews: { minDaysBetweenPerPair: 90 },
 
-  complaints: { hideThreshold: 3, windowDays: 30 },
+  complaints: {
+    windowDays: 30,
+    /** Hide listings when confirmed complaints / opened contacts in the window ≥ share and ≥ min count (TZ). */
+    hideShare: 0.2,
+    hideMinCount: 3,
+    /** Refund for "does not answer": at least this many independent confirmed reporters (weighted). [A] */
+    refundMinIndependentReporters: 2,
+    /** Refunds per account per window. [A] */
+    refundLimitPerWindow: 3,
+    /** Reporters whose refunds / opened contacts exceed this share: their complaints weigh less. [A] */
+    highRefundShare: 0.3,
+    highRefundWeight: 0.5,
+  },
 
-  /**
-   * Yellow flag only for strong signals: a device shared by different companies, or a closed
-   * ring of new companies whose interactions stay inside the ring. [A]
-   */
-  detector: { ringMinSize: 3, ringNewMonths: 6, ringClosedShare: 0.95 },
+  /** Registry mismatch: yellow "Clarify your data" for this many days, then red (TZ). */
+  dataMismatchGraceDays: 14,
 
-  inactivity: { deactivateAfterMonths: 6 },
+  /** Yellow flag only for a closed ring of companies without outside activity. [A] */
+  detector: { ringMinSize: 3, ringClosedShare: 0.95 },
+
+  /** Hidden from search after this many months without login; warning before (TZ). */
+  inactivity: { hideAfterMonths: 6, warnDaysBefore: 14 },
 
   /** Straight-line distance multiplier to approximate road distance. [A] */
   roadFactor: 1.2,

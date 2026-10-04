@@ -201,3 +201,6 @@ a.btn { display: inline-block; text-decoration: none; }
 
 /* ---- complaints ---- */
 .complaint { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+.banner { margin-bottom: 12px; }
+.dispute-form input { flex: 1 1 200px; font: inherit; border: 1px solid var(--border); border-radius: var(--radius); padding: 2px 8px; }

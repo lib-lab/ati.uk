@@ -4,7 +4,7 @@ import { canReview } from '../rules/reviews';
 import { company, emptyState, NOW, review } from '../testing/fixtures';
 import { addDays } from '../time';
 import type { AppState, ContactAccess } from '../types';
-import { fileClaim, postReview, replyToReview, settleClaim } from './reviews';
+import { fileClaim, postReview, replyToClaim, replyToReview, settleClaim } from './reviews';
 
 const access = (viewerId: string, ownerId: string): ContactAccess => ({
   id: `a-${viewerId}-${ownerId}`, viewerId, ownerId, firstListingId: '', openedAt: addDays(NOW, -5), paidWith: 'balance',
@@ -31,8 +31,9 @@ describe('canReview', () => {
     expect(canReview(s, 'moderator', 't', NOW)).toEqual({ ok: false, reason: 'not_company' });
   });
 
-  it('access is directional: the target cannot review the viewer back without its own access', () => {
-    expect(canReview(base(), 't', 'a', NOW)).toEqual({ ok: false, reason: 'no_access' });
+  it('both sides of a contact may review each other: the company whose contact was opened too', () => {
+    expect(canReview(base(), 't', 'a', NOW)).toEqual({ ok: true });
+    expect(canReview(base(), 't', 'b', NOW)).toEqual({ ok: false, reason: 'no_access' });
   });
 
   it('allows one review per directed pair per 90 days', () => {
@@ -45,7 +46,7 @@ describe('canReview', () => {
 
 describe('postReview', () => {
   it('adds the review, logs it and the rating change with the cause', () => {
-    const s = ok(postReview(base(), 't', 1, 'Late'));
+    const s = ok(postReview(base(), 't', 1, true, 'Late'));
     expect(s.reviews).toHaveLength(1);
     expect(s.events.find((e) => e.type === 'review_posted')).toMatchObject({ params: { stars: 1, author: 'a', target: 't' } });
     const rating = s.events.find((e) => e.type === 'rating_changed' && e.subjectIds[0] === 't');
@@ -54,16 +55,25 @@ describe('postReview', () => {
   });
 
   it('refuses without access, twice within 90 days, or with invalid stars', () => {
-    expect(postReview({ ...base(), actorId: 'b' }, 't', 5, '')).toEqual({ ok: false, error: 'review_not_allowed' });
-    const s = ok(postReview(base(), 't', 5, ''));
-    expect(postReview(s, 't', 4, '')).toEqual({ ok: false, error: 'review_too_soon' });
-    expect(postReview(base(), 't', 6 as 5, '')).toEqual({ ok: false, error: 'invalid_review' });
+    expect(postReview({ ...base(), actorId: 'b' }, 't', 5, true, '')).toEqual({ ok: false, error: 'review_not_allowed' });
+    const s = ok(postReview(base(), 't', 5, true, ''));
+    expect(postReview(s, 't', 4, true, '')).toEqual({ ok: false, error: 'review_too_soon' });
+    expect(postReview(base(), 't', 6 as 5, true, '')).toEqual({ ok: false, error: 'invalid_review' });
+  });
+});
+
+describe('review without a deal', () => {
+  it('rates only the contact and is logged as such', () => {
+    const s = ok(postReview(base(), 't', 2, false, 'Did not answer for two days'));
+    expect(s.reviews[0]).toMatchObject({ dealHappened: false, stars: 2 });
+    expect(s.events.find((e) => e.type === 'review_posted')!.reasonKey).toBe('event.review.postedContact');
+    expect(s.events.find((e) => e.type === 'rating_changed')!.reasonKey).toBe('event.rating.reviewContact');
   });
 });
 
 describe('replyToReview', () => {
   it('only the reviewed company, only once', () => {
-    let s = ok(postReview(base(), 't', 3, 'ok'));
+    let s = ok(postReview(base(), 't', 3, true, 'ok'));
     const id = s.reviews[0]!.id;
     expect(replyToReview(s, id, 'Thanks')).toEqual({ ok: false, error: 'not_allowed' }); // actor is the author
     s = ok(replyToReview({ ...s, actorId: 't' }, id, 'Thanks'));
@@ -87,6 +97,20 @@ describe('claims', () => {
     expect(computeRating(s, 't', NOW).score).toBe(before);
     expect(s.events.at(-1)).toMatchObject({ type: 'rating_changed', reasonKey: 'event.rating.claimSettled' });
     expect(settleClaim(s, claim.id)).toEqual({ ok: false, error: 'not_allowed' }); // already settled
+  });
+
+  it('the accused company answers once and is notified about the claim', () => {
+    let s = ok(fileClaim(base(), 't', 'Unpaid'));
+    expect(s.notifications.find((n) => n.companyId === 't')?.type).toBe('claim_received');
+    const id = s.claims[0]!.id;
+    expect(replyToClaim(s, id, 'Paid on 1 Oct')).toEqual({ ok: false, error: 'not_allowed' }); // actor is the claimant
+    s = ok(replyToClaim({ ...s, actorId: 't' }, id, 'Paid on 1 Oct'));
+    expect(s.claims[0]!.reply?.text).toBe('Paid on 1 Oct');
+    expect(replyToClaim(s, id, 'Again')).toEqual({ ok: false, error: 'not_allowed' });
+  });
+
+  it('the side whose contact was opened may file a claim too', () => {
+    expect(fileClaim({ ...base(), actorId: 't' }, 'a', 'No-show').ok).toBe(true);
   });
 
   it('needs an opened contact and a text; the moderator may settle', () => {

@@ -9,7 +9,8 @@ export function loginAs(state: AppState, actorId: ActorId): CommandResult {
   }
   const company = state.companies.find((c) => c.id === actorId);
   if (!company) return { ok: false, error: 'company_not_found' };
-  const companies = state.companies.map((c) => (c.id === actorId ? { ...c, lastLoginAt: state.now } : c));
+  // A login resets the inactivity warning; a hidden company still has to confirm its contacts to return.
+  const companies = state.companies.map((c) => (c.id === actorId ? { ...c, lastLoginAt: state.now, inactivityWarnedAt: undefined } : c));
   return { ok: true, state: logEvent({ ...state, actorId, companies }, sessionEvent(actorId)) };
 }
 

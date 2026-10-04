@@ -11,7 +11,8 @@ export const SEED_REGISTRY_RECORDS: RegistryRecord[] = [...COMPANY_SPECS, ...RIN
   regNumber: s.regNumber,
   legalName: s.archetype === 'mismatch' ? MISMATCH_REGISTRY_NAME : s.legalName,
   address: `Registered office, ${getCity(s.homeCities[0]!).name}`,
-  status: s.archetype === 'liquidated' ? 'liquidated' : 'active',
+  // The Dutch registry in this prototype does not report the status: the check is unavailable.
+  status: s.country === 'NL' ? undefined : s.archetype === 'liquidated' ? 'liquidated' : 'active',
   foundedAt: addDays(CONFIG.clockStart, -Math.round(s.foundedYearsAgo * 365)),
   reportsFiled: s.reportsFiled,
 }));

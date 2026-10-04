@@ -1,6 +1,6 @@
 // Review and claim forms shown in a company profile.
 import { useState } from 'react';
-import { fileClaim, postReview, replyToReview, settleClaim } from '../../domain/commands/reviews';
+import { fileClaim, postReview, replyToClaim, replyToReview, settleClaim } from '../../domain/commands/reviews';
 import { canFileClaim, canReview, type Eligibility } from '../../domain/rules/reviews';
 import type { AppState, Claim, Company, Review } from '../../domain/types';
 import { store } from '../../store/store';
@@ -15,6 +15,7 @@ function reasonText(e: Eligibility, kind: 'review' | 'claim'): string {
 
 export function ReviewForm({ state, target }: { state: AppState; target: Company }) {
   const [stars, setStars] = useState<Review['stars'] | 0>(0);
+  const [deal, setDeal] = useState<boolean | null>(null);
   const [text, setText] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const eligibility = canReview(state, state.actorId, target.id, state.now);
@@ -25,14 +26,21 @@ export function ReviewForm({ state, target }: { state: AppState; target: Company
   }
 
   const submit = () => {
+    if (deal === null) return setMessage({ ok: false, text: t('rep.chooseDeal') });
     if (!stars) return setMessage({ ok: false, text: t('rep.chooseStars') });
-    const res = store.run((s) => postReview(s, target.id, stars, text));
+    const res = store.run((s) => postReview(s, target.id, stars, deal, text));
     setMessage(res.ok ? { ok: true, text: t('rep.reviewDone') } : { ok: false, text: t(`error.${res.error}`) });
-    if (res.ok) { setStars(0); setText(''); }
+    if (res.ok) { setStars(0); setText(''); setDeal(null); }
   };
 
   return (
     <div className="panel rep-form">
+      <div className="inline">
+        <span>{t('rep.dealQuestion')}</span>
+        <label className="checkbox"><input type="radio" name="deal" checked={deal === true} onChange={() => setDeal(true)} /> {t('common.yes')}</label>
+        <label className="checkbox"><input type="radio" name="deal" checked={deal === false} onChange={() => setDeal(false)} /> {t('common.no')}</label>
+      </div>
+      {deal !== null && <p className="muted small">{deal ? t('rep.rateWork') : t('rep.rateContact')}</p>}
       <div className="inline">
         <span>{t('rep.yourReview')}</span>
         <span className="star-input" role="radiogroup" aria-label={t('rep.yourReview')}>
@@ -105,6 +113,24 @@ export function ClaimForm({ state, target }: { state: AppState; target: Company 
       </div>
       {message && !message.ok && <p className="alert alert-red">{message.text}</p>}
     </div>
+  );
+}
+
+export function ClaimReplyForm({ claim }: { claim: Claim }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  if (!open) return <button className="link-button small" onClick={() => setOpen(true)}>{t('rep.answerClaim')}</button>;
+  return (
+    <span className="inline reply-form">
+      <input id={`claim-reply-${claim.id}`} value={text} placeholder={t('rep.replyPlaceholder')} onChange={(e) => setText(e.target.value)} />
+      <button className="btn btn-small btn-primary" onClick={() => {
+        const res = store.run((s) => replyToClaim(s, claim.id, text));
+        if (!res.ok) setError(t(`error.${res.error}`));
+      }}>{t('rep.sendReply')}</button>
+      <button className="btn btn-small btn-ghost" onClick={() => setOpen(false)}>{t('contact.cancel')}</button>
+      {error && <span className="field-error">{error}</span>}
+    </span>
   );
 }
 

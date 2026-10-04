@@ -7,7 +7,7 @@ import { store } from '../../store/store';
 import { formatDate } from '../format';
 import { t } from '../i18n';
 
-const TYPES: ComplaintType[] = ['outdated', 'no_response'];
+const TYPES: ComplaintType[] = ['outdated', 'no_response', 'wrong_contact'];
 
 export function ComplaintBlock({ state, listing }: { state: AppState; listing: Listing }) {
   const [message, setMessage] = useState<string | null>(null);
@@ -43,6 +43,7 @@ export function ComplaintBlock({ state, listing }: { state: AppState; listing: L
         })}
       </div>
       {!canComplain(state, state.actorId, listing, 'no_response').ok && <span className="muted small">{t('complaint.needsAccess')}</span>}
+      <span className="muted small">{t('complaint.refundRule')}</span>
       {message && <span className="small">{message}</span>}
     </div>
   );

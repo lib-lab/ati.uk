@@ -4,6 +4,7 @@ import { CONFIG } from '../config';
 import { daysBetween, monthsBetween, addDays, isBefore } from '../time';
 import type {
   AppState,
+  Claim,
   Company,
   Id,
   IsoDate,
@@ -13,7 +14,7 @@ import type {
   Review,
 } from '../types';
 import { activeFlags } from './flags';
-import { recencyWeight, reviewWeight } from './reviewWeight';
+import { interactionWeight, recencyWeight, reviewWeight } from './reviewWeight';
 
 export type RatingInput = Pick<AppState, 'companies' | 'reviews' | 'claims' | 'flags' | 'listings' | 'contactAccesses'>;
 
@@ -23,14 +24,16 @@ const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
 export { recencyWeight };
 
-/** Reviews that count: not voided, and the author is not under a "suspected linked" (yellow) flag. */
-export function countedReviews(input: RatingInput, targetId: Id): Review[] {
-  return input.reviews.filter(
-    (r) =>
-      r.targetId === targetId &&
-      !r.voided &&
-      !activeFlags(input.flags, r.authorId).some((f) => f.kind === 'suspected_linked'),
+/** A ring flag on the author excludes the author's reviews of the other ring members (TZ: "reviews inside the ring"). */
+function excludedByRingFlag(input: Pick<AppState, 'flags'>, review: Review): boolean {
+  return activeFlags(input.flags, review.authorId).some(
+    (f) => f.kind === 'suspected_linked' && (!f.relatedIds || f.relatedIds.includes(review.targetId)),
   );
+}
+
+/** Reviews that count: not voided and not inside a flagged ring. */
+export function countedReviews(input: Pick<AppState, 'reviews' | 'flags'>, targetId: Id): Review[] {
+  return input.reviews.filter((r) => r.targetId === targetId && !r.voided && !excludedByRingFlag(input, r));
 }
 
 /**
@@ -68,40 +71,60 @@ export function reviewsComponent(input: RatingInput, targetId: Id, now: IsoDate)
   return ((avg - 1) / 4) * 100;
 }
 
-export function verificationComponent(company: Company, now: IsoDate): number {
-  const v = R.verification;
+/**
+ * Official check: the company is real and active, and the profile matches the registry.
+ * Checks the registry does not provide are left out; age and reports are shown but not scored.
+ * Not found in the registry → 0.
+ */
+export function verificationComponent(company: Company): number {
+  const v = R.verification.shares;
   const record = company.verification.record;
   if (!record) return 0;
-  const years = daysBetween(record.foundedAt, now) / 365;
-  const age = clamp01((years - v.ageZeroYears) / (v.ageFullYears - v.ageZeroYears));
-  const value =
-    (record.status === 'active' ? v.activeStatus : 0) +
-    age * v.age +
-    (record.reportsFiled ? v.reports : 0) +
-    (company.verification.matchesProfile ? v.profileMatch : 0);
-  return value * 100;
+  let sum = v.profileMatch * (company.verification.matchesProfile ? 1 : 0);
+  let shares = v.profileMatch;
+  if (record.status !== undefined) {
+    sum += v.activeStatus * (record.status === 'active' ? 1 : 0);
+    shares += v.activeStatus;
+  }
+  return (sum / shares) * 100;
 }
 
-export function claimsComponent(input: RatingInput, companyId: Id): number {
-  const open = input.claims.filter((c) => c.targetId === companyId && c.status === 'open').length;
-  return Math.max(0, 100 - open * R.claims.penaltyPerOpenClaim);
+/** Claims that affect the score now: confirmed ones, and open ones younger than 30 days. */
+export function activeClaims(input: Pick<AppState, 'claims'>, companyId: Id, now: IsoDate): Claim[] {
+  const expiry = addDays(now, -R.claims.unconfirmedExpiryDays);
+  return input.claims.filter(
+    (c) => c.targetId === companyId && (c.status === 'confirmed' || (c.status === 'open' && !isBefore(c.createdAt, expiry))),
+  );
 }
 
-/** Activity and tenure; null during the first days on the platform. */
+/** 100 minus 25 points per claim, each claim weighted like a review (contact cost × author × independence). */
+export function claimsComponent(input: RatingInput, companyId: Id, now: IsoDate): number {
+  const penalty = activeClaims(input, companyId, now).reduce(
+    (sum, c) => sum + R.claims.penaltyPerClaim * interactionWeight(input, c.claimantId, c.targetId, now),
+    0,
+  );
+  return Math.max(0, 100 - penalty);
+}
+
+/** Counterparties of a contact with the company who later left a counted review about it. */
+export function reviewedContacts(input: RatingInput, companyId: Id): Id[] {
+  const counted = countedReviews(input, companyId);
+  const out = new Set<Id>();
+  for (const a of input.contactAccesses) {
+    const other = a.viewerId === companyId ? a.ownerId : a.ownerId === companyId ? a.viewerId : null;
+    if (!other) continue;
+    if (counted.some((r) => r.authorId === other && !isBefore(r.createdAt, a.openedAt))) out.add(other);
+  }
+  return [...out];
+}
+
+/** Tenure and contacts that later received reviews; null during the first days on the platform. */
 export function activityComponent(input: RatingInput, company: Company, now: IsoDate): number | null {
   const a = R.activity;
   if (daysBetween(company.joinedAt, now) < a.availableAfterDays) return null;
   const tenure = clamp01(monthsBetween(company.joinedAt, now) / a.tenureFullMonths);
-  const windowStart = addDays(now, -a.regularityWindowDays);
-  const own = input.listings.filter((l) => l.ownerId === company.id);
-  const recent = own.filter((l) => !isBefore(l.createdAt, windowStart) && !isBefore(now, l.createdAt)).length;
-  const regularity = clamp01(recent / a.regularityFullCount);
-  const removed = own.filter((l) => l.status === 'removed' && l.removalReason);
-  if (removed.length >= a.foundShareMinRemovals) {
-    const found = removed.filter((l) => l.removalReason === 'found_on_platform').length / removed.length;
-    return (tenure * a.tenure + regularity * a.regularity + found * a.foundShare) * 100;
-  }
-  return ((tenure * a.tenure + regularity * a.regularity) / (a.tenure + a.regularity)) * 100;
+  const reviewed = clamp01(reviewedContacts(input, company.id).length / a.reviewedContactsFull);
+  return (a.tenureShare * tenure + (1 - a.tenureShare) * reviewed) * 100;
 }
 
 export function computeRating(input: RatingInput, companyId: Id, now: IsoDate): Rating {
@@ -110,8 +133,8 @@ export function computeRating(input: RatingInput, companyId: Id, now: IsoDate): 
 
   const values: Record<RatingComponentKey, number | null> = {
     reviews: reviewsComponent(input, companyId, now),
-    verification: verificationComponent(company, now),
-    claims: claimsComponent(input, companyId),
+    verification: verificationComponent(company),
+    claims: claimsComponent(input, companyId, now),
     activity: activityComponent(input, company, now),
   };
 
@@ -150,7 +173,7 @@ export function primaryMark(rating: Rating, company: Company): PrimaryMark {
   const flag = rating.redFlags[0] ?? rating.yellowFlags[0];
   if (flag) return { kind: 'flag', flag };
   const record = company.verification.record;
-  return record && record.status === 'active' && company.verification.matchesProfile
+  return record && (record.status === undefined || record.status === 'active') && company.verification.matchesProfile
     ? { kind: 'verified' }
     : { kind: 'not_verified' };
 }

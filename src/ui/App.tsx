@@ -1,4 +1,5 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { InactiveBanner } from './components/InactiveBanner';
 import { TopBar } from './components/TopBar';
 import { BalancePage } from './pages/BalancePage';
 import { CompaniesPage } from './pages/CompaniesPage';
@@ -16,6 +17,7 @@ export function App() {
     <HashRouter>
       <TopBar />
       <main className="page">
+        <InactiveBanner />
         <Routes>
           <Route path="/" element={<Navigate to="/search" replace />} />
           <Route path="/search" element={<SearchPage />} />

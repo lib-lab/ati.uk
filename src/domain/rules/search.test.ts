@@ -106,17 +106,27 @@ describe('E4 rating filters on seed data', () => {
   const seed = buildSeedState();
   const owners = (f: SearchFilters) => new Set(searchListings(seed, f, seed.now).map((l) => l.ownerId));
 
-  it('"only without red flags" removes Ghost Lines (liquidated) and Euro Cargo Partners (mismatch)', () => {
+  it('"only without red flags" removes Ghost Lines (liquidated); Euro Cargo (yellow "clarify your data") stays', () => {
     expect(owners({ kind: 'cargo' }).has('c11')).toBe(true);
     const clean = owners({ kind: 'cargo', noRedFlags: true });
     expect(clean.has('c11')).toBe(false);
-    expect(clean.has('c12')).toBe(false);
+    expect(clean.has('c12')).toBe(true);
   });
 
-  it('minimum rating removes companies below it', () => {
+  it('minimum rating removes rated companies below it but keeps new members', () => {
     const res = searchListings(seed, { kind: 'cargo', minRating: 80 }, seed.now);
     expect(res.length).toBeGreaterThan(0);
-    for (const l of res) expect(computeRating(seed, l.ownerId, seed.now).score).toBeGreaterThanOrEqual(80);
+    for (const l of res) {
+      const r = computeRating(seed, l.ownerId, seed.now);
+      expect(r.isNewMember || r.score >= 80).toBe(true);
+    }
+    expect(res.some((l) => computeRating(seed, l.ownerId, seed.now).isNewMember)).toBe(true);
+  });
+
+  it('"only rated" removes new members', () => {
+    const res = searchListings(seed, { kind: 'cargo', onlyRated: true }, seed.now);
+    expect(res.length).toBeGreaterThan(0);
+    expect(res.every((l) => !computeRating(seed, l.ownerId, seed.now).isNewMember)).toBe(true);
   });
 });
 
