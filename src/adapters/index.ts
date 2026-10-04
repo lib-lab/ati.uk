@@ -7,6 +7,12 @@ import type { PaymentProvider } from './payments/PaymentProvider';
 import type { EmailChannel } from './notifications/EmailChannel';
 import { SEED_REGISTRY_RECORDS } from '../seed/registry';
 
+/**
+ * Test inbox: every e-mail of the prototype is addressed here (companies have no e-mail in the
+ * TZ data model). MockEmail only keeps messages in memory; a real EmailChannel would deliver them.
+ */
+export const TEST_INBOX = '90569oc62@mozmail.com';
+
 export interface Adapters {
   registry: CompanyRegistry;
   payments: PaymentProvider;

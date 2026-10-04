@@ -149,9 +149,9 @@ export const subscriptionDigestProcess: TimeProcess = {
  * The mail channel accepted the e-mail copies of these notifications (the UI calls the adapter,
  * then this command, like a top-up). Each e-mail is written to the event log.
  */
-export function recordEmailsSent(state: AppState, notificationIds: Id[]): CommandResult {
+export function recordEmailsSent(state: AppState, sent: { id: Id; to: string }[]): CommandResult {
   let s = state;
-  for (const id of notificationIds) {
+  for (const { id, to } of sent) {
     const n = s.notifications.find((x) => x.id === id);
     if (!n || n.emailedAt || !SUBSCRIPTION_NOTIFICATIONS.includes(n.type)) continue;
     s = { ...s, notifications: s.notifications.map((x) => (x.id === id ? { ...x, emailedAt: s.now } : x)) };
@@ -160,7 +160,7 @@ export function recordEmailsSent(state: AppState, notificationIds: Id[]): Comman
       actor: 'system',
       subjectIds: [n.companyId, n.id],
       reasonKey: n.type === 'subscription_match' ? 'event.email.match' : 'event.email.digest',
-      params: n.type === 'subscription_match' ? { company: n.companyId, listing: n.params.listing! } : { company: n.companyId, count: n.params.count! },
+      params: n.type === 'subscription_match' ? { to, company: n.companyId, listing: n.params.listing! } : { to, company: n.companyId, count: n.params.count! },
     });
   }
   return { ok: true, state: s };

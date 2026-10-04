@@ -130,11 +130,11 @@ describe('e-mail copies', () => {
     s = post(s);
     const due = emailsDue(s);
     expect(due.map((n) => n.type)).toEqual(['subscription_match']);
-    s = ok(recordEmailsSent(s, due.map((n) => n.id)));
+    s = ok(recordEmailsSent(s, due.map((n) => ({ id: n.id, to: 'inbox@example.test' }))));
     expect(emailsDue(s)).toEqual([]);
-    expect(s.events.at(-1)).toMatchObject({ type: 'email_sent', reasonKey: 'event.email.match' });
+    expect(s.events.at(-1)).toMatchObject({ type: 'email_sent', reasonKey: 'event.email.match', params: { to: 'inbox@example.test' } });
     const events = s.events.length;
-    s = ok(recordEmailsSent(s, due.map((n) => n.id)));
+    s = ok(recordEmailsSent(s, due.map((n) => ({ id: n.id, to: 'inbox@example.test' }))));
     expect(s.events).toHaveLength(events);
   });
 });
