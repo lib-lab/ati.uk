@@ -41,7 +41,15 @@ a:hover { text-decoration: underline; }
 .nav { display: flex; gap: 12px; }
 .nav a { color: var(--muted); }
 .nav a.active { color: var(--accent); }
-.topbar-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-left: auto; }
+.topbar-account { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-left: auto; }
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px;
+  padding: 6px 16px; border-bottom: 1px solid var(--border); background: var(--bg-subtle); font-size: 13px;
+}
+.toolbar-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.toolbar-end { margin-left: auto; }
+.btn-small { padding: 2px 8px; font-size: 13px; }
+.counter { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; text-align: center; }
 
 .page { padding: 16px; max-width: 1200px; margin: 0 auto; }
 
@@ -73,7 +81,7 @@ select, input {
 .badge-neutral { color: var(--muted); background: var(--neutral-bg); border-color: var(--border); }
 
 @media (max-width: 640px) {
-  .topbar-tools { margin-left: 0; }
+  .topbar-account, .toolbar-end { margin-left: 0; }
   .page { padding: 12px; }
 }
 
@@ -130,3 +138,12 @@ select, input {
 @media (max-width: 760px) {
   .card-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---- lists, stats ---- */
+.list { list-style: none; padding: 0; margin: 12px 0 0; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.list-item { display: flex; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.list-item:last-child { border-bottom: none; }
+.list-item.unread { background: var(--accent-bg); }
+.stats { display: flex; flex-wrap: wrap; gap: 16px 40px; margin-top: 12px; }
+.big { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.positive { color: var(--accent); }
