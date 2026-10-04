@@ -371,6 +371,8 @@ export interface Subscription {
   lastDigestAt?: IsoDate;
   /** Listings matched but not yet delivered (hourly digest). */
   pendingListingIds: Id[];
+  /** Listings already delivered: a listing is reported once per subscription, also after edits. */
+  notifiedListingIds: Id[];
 }
 
 export type NotificationType =
@@ -400,6 +402,8 @@ export interface Notification {
   readAt?: IsoDate;
   /** i18n params; listing ids etc. `variant` selects the text "notification.<type>.<variant>". */
   params: Record<string, string | number>;
+  /** Set when the e-mail copy was handed to the mail channel (subscription notifications). */
+  emailedAt?: IsoDate;
 }
 
 // ---------- Rating ----------
@@ -444,6 +448,9 @@ export type EventType =
   | 'claim_resolved'
   | 'review_posted'
   | 'review_text_hidden'
+  | 'subscription_saved'
+  | 'subscription_deleted'
+  | 'email_sent'
   | 'flag_set'
   | 'flag_resolved'
   | 'company_deactivated'

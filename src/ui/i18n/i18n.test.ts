@@ -36,6 +36,10 @@ describe('i18n', () => {
       keys.add(`event.rating.flagResolved.${kind}`);
     }
     for (const kind of ['money', 'quota']) keys.add(`event.refund.${kind}Edit`);
+    for (const f of ['instant', 'hourly']) {
+      keys.add(`event.subscription.saved.${f}`);
+      keys.add(`event.subscription.frequency.${f}`);
+    }
     for (const k of [...keys]) if (k.endsWith('.')) keys.delete(k);
     const missing = [...keys].filter((k) => !(k in en));
     expect(missing).toEqual([]);
@@ -69,6 +73,8 @@ describe('i18n', () => {
       'notification.refund.quotaEdit',
       'notification.collection_slowed',
       'notification.collection_blocked',
+      'notification.subscription_match',
+      'notification.subscription_digest',
     ];
     expect(keys.filter((k) => !(k in en))).toEqual([]);
   });

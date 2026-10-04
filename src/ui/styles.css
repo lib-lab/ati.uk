@@ -210,3 +210,4 @@ a.btn { display: inline-block; text-decoration: none; }
 .name-confirm p, .rep-form .alert { margin: 0; }
 .name-confirm-field { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: var(--narrow-form-max-width); }
 .human-check { display: flex; align-items: center; gap: var(--space-6); margin: var(--space-8) 0; }
+.notification-links { margin-left: var(--space-8); }

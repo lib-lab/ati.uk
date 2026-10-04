@@ -6,6 +6,7 @@ import { BalancePage } from './pages/BalancePage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyPage } from './pages/CompanyPage';
 import { EventsPage } from './pages/EventsPage';
+import { SubscriptionsPage } from './pages/SubscriptionsPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { ListingPage } from './pages/ListingPage';
 import { ModerationPage } from './pages/ModerationPage';
@@ -31,6 +32,7 @@ export function App() {
           <Route path="/my-listings" element={<MyListingsPage />} />
           <Route path="/balance" element={<BalancePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/subscriptions" element={<SubscriptionsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/moderation" element={<ModerationPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
