@@ -1,18 +1,20 @@
 /*
  * Design tokens. The only place with raw values for styles: sizes, colours, weights.
  * Components and styles.css use var(--…) only (see CLAUDE.md "Design").
- * The spacing scale mirrors the values used today; "Visual polish" (ROADMAP) will reduce it.
+ * Names say what a token is for, not its value.
  *
  * Breakpoints cannot be CSS variables inside @media, so they are fixed here and are the
  * only numbers allowed in media queries: mobile 640px, card layout 760px.
  */
 :root {
-  /* colours */
+  /* colours. Text pairs meet WCAG AA (4.5:1) on every background they are used on;
+     control borders meet 3:1 against the page (see DECISIONS "Visual polish"). */
   --bg: #ffffff;
   --bg-subtle: #f7f7f8;
   --text: #18181b;
-  --muted: #6b7280;
+  --muted: #626a76;
   --border: #e4e4e7;
+  --border-control: #8d9199;
   --accent: #2563eb;
   --accent-bg: #eff4ff;
   --accent-border: #c7d7fe;
@@ -25,17 +27,14 @@
   --yellow-border: #fde68a;
   --neutral-bg: #f4f4f5;
 
-  /* typography */
+  /* typography: five sizes */
   --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-size-xs: 11px; /* toolbar label, counters */
-  --font-size-sm: 12px; /* hints, badges, table heads, field labels */
-  --font-size-md: 13px; /* toolbar, small buttons, alerts, chips */
-  --font-size-base: 14px;
-  --font-size-h2: 16px;
-  --font-size-lg: 18px; /* score button */
-  --font-size-xl: 20px; /* h1, big numbers, star input */
-  --font-size-xxl: 28px; /* score in the profile */
+  --font-size-caption: 12px; /* labels, hints, badges, table heads, compact controls */
+  --font-size-body: 14px;
+  --font-size-subtitle: 16px; /* h2 */
+  --font-size-title: 20px; /* h1, big numbers, score */
+  --font-size-display: 28px; /* score in the profile */
   --line-height: 1.45;
   --line-height-tight: 1;
   --font-weight-medium: 500;
@@ -43,20 +42,22 @@
   --letter-spacing-caps: 0.05em;
   --letter-spacing-stars: 1px;
 
-  /* spacing */
-  --space-1: 1px;
-  --space-2: 2px;
-  --space-3: 3px;
-  --space-4: 4px;
-  --space-5: 5px;
-  --space-6: 6px;
-  --space-8: 8px;
-  --space-10: 10px;
-  --space-12: 12px;
-  --space-14: 14px;
-  --space-16: 16px;
-  --space-24: 24px;
-  --space-40: 40px;
+  /* spacing: one short scale */
+  --space-2xs: 2px; /* inside badges and scores */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* blocks: the same frame for panels, cards and lists */
+  --block-padding-y: var(--space-md);
+  --block-padding-x: var(--space-lg);
+  --row-padding-y: var(--space-sm);
+  --row-padding-x: var(--space-md);
+  --cell-padding-y: var(--space-sm);
+  --cell-padding-x: var(--space-md);
 
   /* borders and radii */
   --border-width: 1px;
@@ -65,13 +66,17 @@
   --radius-lg: 12px;
   --radius-pill: 999px;
 
-  /* controls: height comes from font size, line height and these paddings */
-  --control-padding-y: var(--space-4);
-  --control-padding-x: var(--space-8);
-  --button-padding-x: var(--space-10);
-  --button-small-padding-y: var(--space-2);
+  /* controls: one height per row size */
+  --control-height: 32px;
+  --control-height-compact: 26px;
+  --control-padding-x: var(--space-sm);
+  --button-padding-x: var(--space-md);
+  --button-compact-padding-x: var(--space-sm);
+  --textarea-padding-y: var(--space-xs);
   --textarea-rows: 2;
   --textarea-rows-tall: 12;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
   /* widths */
   --page-max-width: 1200px;

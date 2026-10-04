@@ -85,6 +85,7 @@ export const en = {
   'search.min': 'from',
   'search.max': 'to',
   'search.clear': 'Clear filters',
+  'search.filtersToggle': 'Filters ({count})',
   'search.found': '{count} found',
   'search.sortBy': 'Sort by',
   'search.priorityFirst': 'priority listings always first',
