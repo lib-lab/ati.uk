@@ -34,6 +34,8 @@ export function TopBar() {
         </Link>
         <nav className="nav">
           <NavLink to="/search">{t('nav.search')}</NavLink>
+          {actor && <NavLink to="/post">{t('nav.post')}</NavLink>}
+          {actor && <NavLink to="/my-listings">{t('nav.myListings')}</NavLink>}
           {actor && <NavLink to="/balance">{t('nav.balance')}</NavLink>}
           {actor && (
             <NavLink to="/notifications">

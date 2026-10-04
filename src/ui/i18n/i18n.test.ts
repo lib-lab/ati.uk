@@ -19,7 +19,11 @@ describe('i18n', () => {
     }
     // contactOpened keys are built from paidWith values
     for (const pw of ['free_quota', 'package', 'balance', 'open_listing']) keys.add(`event.contactOpened.${pw}`);
-    keys.delete('event.contactOpened.');
+    for (const r of ['found_on_platform', 'found_elsewhere', 'not_relevant']) {
+      keys.add(`event.listing.removed.${r}`);
+      keys.add(`event.rating.removed.${r}`);
+    }
+    for (const k of [...keys]) if (k.endsWith('.')) keys.delete(k);
     const missing = [...keys].filter((k) => !(k in en));
     expect(missing).toEqual([]);
   });

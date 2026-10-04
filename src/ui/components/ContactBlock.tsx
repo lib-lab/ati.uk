@@ -32,6 +32,7 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
         <ContactDetails state={state} listing={listing} />
         <p className="muted small">
           {decision.kind === 'own_listing' || !access ? t('contact.own') : t('contact.repeatNote', { date: formatDate(access.openedAt) })}
+          {decision.kind === 'own_listing' && <> <Link to="/my-listings">{t('contact.manage')}</Link></>}
         </p>
       </div>
     );

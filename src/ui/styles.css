@@ -38,7 +38,7 @@ a:hover { text-decoration: underline; }
   padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--bg);
 }
 .brand { font-weight: 600; color: var(--text); }
-.nav { display: flex; gap: 12px; }
+.nav { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .nav a { color: var(--muted); }
 .nav a.active { color: var(--accent); }
 .topbar-account { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-left: auto; }
@@ -170,3 +170,23 @@ select, input {
 @media (max-width: 640px) {
   .component summary { grid-template-columns: minmax(0, 1fr) 40px; }
 }
+
+/* ---- posting form, my listings ---- */
+.form { display: flex; flex-direction: column; gap: 12px; max-width: 900px; }
+.form fieldset { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px 16px 14px; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 16px; min-width: 0; }
+.form legend { font-weight: 600; padding: 0 4px; }
+.form label, .form .field-wide { display: flex; flex-direction: column; gap: 3px; font-size: 13px; min-width: 0; }
+.form label > span:first-child, .form .label { color: var(--muted); font-size: 12px; }
+.form .field-wide { grid-column: 1 / -1; }
+.form input, .form select, .form textarea { width: 100%; font: inherit; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; }
+.form input[type='checkbox'], .form input[type='radio'] { width: auto; }
+.form .checkbox, .filters .checkbox, .my-form .checkbox { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; }
+.form .checkbox span, .form .checkbox label { color: var(--text); font-size: 13px; }
+.field-error { color: var(--red); font-size: 12px; }
+.template-bar { margin: 8px 0; }
+.page-title { justify-content: space-between; width: 100%; }
+.my-listing { flex-direction: column; gap: 6px; }
+.my-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.my-form { background: var(--bg-subtle); border-radius: var(--radius); padding: 6px 8px; }
+.my-listing p { margin: 0; }
+a.btn { display: inline-block; text-decoration: none; }
