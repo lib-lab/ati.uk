@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CITIES } from '../../domain/geo/cities';
 import { countVisible, hasPriority, searchListings } from '../../domain/rules/search';
 import type { BodyType, ListingKind, LoadingMethod, SearchFilters, SortKey } from '../../domain/types';
@@ -167,7 +167,7 @@ export function SearchPage() {
                     <td>
                       <div className="inline">
                         <ScoreChip rating={rating} />
-                        <span>{owner.legalName}</span>
+                        <Link to={`/company/${owner.id}`} onClick={(e) => e.stopPropagation()}>{owner.legalName}</Link>
                       </div>
                       <div className="badges">
                         <MarkBadges rating={rating} company={owner} />

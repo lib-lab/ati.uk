@@ -153,3 +153,20 @@ select, input {
 .filters input[type='date'] { width: 140px; }
 .filters label.checkbox { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 13px; padding-bottom: 4px; }
 .results-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: 8px 0; }
+
+/* ---- company profile ---- */
+.profile-head { display: flex; gap: 16px; align-items: flex-start; }
+.score-large { font-size: 28px; padding: 8px 14px; border-radius: var(--radius-lg); }
+.flag-notes { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.components { display: flex; flex-direction: column; gap: 8px; }
+.component summary { display: grid; grid-template-columns: minmax(0, 1fr) 48px minmax(0, 160px) minmax(0, 120px); gap: 8px; align-items: baseline; cursor: pointer; }
+.component-name { font-weight: 500; }
+.component .breakdown { margin: 8px 0; }
+.plain { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 2px; }
+.list-item.review { flex-direction: column; gap: 4px; }
+.stars { color: var(--text); letter-spacing: 1px; }
+.reply { border-left: 2px solid var(--border); padding-left: 8px; }
+.profile-link { margin-left: 8px; }
+@media (max-width: 640px) {
+  .component summary { grid-template-columns: minmax(0, 1fr) 40px; }
+}
