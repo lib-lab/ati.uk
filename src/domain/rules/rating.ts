@@ -13,12 +13,15 @@ import type {
   Review,
 } from '../types';
 import { activeFlags } from './flags';
+import { recencyWeight, reviewWeight } from './reviewWeight';
 
-export type RatingInput = Pick<AppState, 'companies' | 'reviews' | 'claims' | 'flags' | 'listings'>;
+export type RatingInput = Pick<AppState, 'companies' | 'reviews' | 'claims' | 'flags' | 'listings' | 'contactAccesses'>;
 
 const R = CONFIG.rating;
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+
+export { recencyWeight };
 
 /** Reviews that count: not voided, and the author is not under a "suspected linked" (yellow) flag. */
 export function countedReviews(input: RatingInput, targetId: Id): Review[] {
@@ -30,34 +33,39 @@ export function countedReviews(input: RatingInput, targetId: Id): Review[] {
   );
 }
 
-export function recencyWeight(review: Pick<Review, 'createdAt'>, now: IsoDate): number {
-  const months = monthsBetween(review.createdAt, now);
-  return months > R.reviews.oldAfterMonths ? R.reviews.oldWeight : 1;
+/**
+ * Weighted average of stars with a neutral prior (see DECISIONS "Review weight"):
+ * low-weight reviews move the average less, even when they are the only ones.
+ */
+export function weightedAverage(items: { stars: number; weight: number }[]): number {
+  const p = R.reviews.prior;
+  let sum = p.stars * p.weight;
+  let weights = p.weight;
+  for (const x of items) {
+    sum += x.stars * x.weight;
+    weights += x.weight;
+  }
+  return sum / weights;
 }
 
 /**
- * Reviews component, 0..100, or null without counted reviews.
- * withAuthorWeight=false is used to get an author's own score without recursion.
+ * Weight of each review about the target. Excluded reviews (voided, or the author is under review)
+ * weigh 0 but still exist: the component stays available and falls back to the neutral prior,
+ * so a flag never improves the target's score (see DECISIONS "Review weight").
  */
-export function reviewsComponent(input: RatingInput, targetId: Id, now: IsoDate, withAuthorWeight = true): number | null {
-  const reviews = countedReviews(input, targetId);
-  if (reviews.length === 0) return null;
-  let sum = 0;
-  let weights = 0;
-  for (const r of reviews) {
-    let w = recencyWeight(r, now);
-    if (withAuthorWeight) w *= authorWeight(input, r.authorId, now);
-    sum += r.stars * w;
-    weights += w;
-  }
-  const avg = sum / weights;
-  return ((avg - 1) / 4) * 100;
+export function weightedReviews(input: RatingInput, targetId: Id, now: IsoDate) {
+  const counted = new Set(countedReviews(input, targetId).map((r) => r.id));
+  return input.reviews
+    .filter((r) => r.targetId === targetId)
+    .map((r) => ({ review: r, counted: counted.has(r.id), weight: counted.has(r.id) ? reviewWeight(input, r, now) : null }));
 }
 
-/** Authors with a high score weigh more. Their score is computed without author weights (no recursion). */
-export function authorWeight(input: RatingInput, authorId: Id, now: IsoDate): number {
-  const score = computeRating(input, authorId, now, { withAuthorWeight: false }).score;
-  return score >= R.reviews.highRatedAuthorScore ? R.reviews.highRatedAuthorWeight : 1;
+/** Reviews component, 0..100, or null when the company has no reviews at all. */
+export function reviewsComponent(input: RatingInput, targetId: Id, now: IsoDate): number | null {
+  const items = weightedReviews(input, targetId, now);
+  if (items.length === 0) return null;
+  const avg = weightedAverage(items.map((x) => ({ stars: x.review.stars, weight: x.weight?.total ?? 0 })));
+  return ((avg - 1) / 4) * 100;
 }
 
 export function verificationComponent(company: Company, now: IsoDate): number {
@@ -96,17 +104,12 @@ export function activityComponent(input: RatingInput, company: Company, now: Iso
   return ((tenure * a.tenure + regularity * a.regularity) / (a.tenure + a.regularity)) * 100;
 }
 
-export interface RatingOptions {
-  withAuthorWeight?: boolean;
-}
-
-export function computeRating(input: RatingInput, companyId: Id, now: IsoDate, options: RatingOptions = {}): Rating {
+export function computeRating(input: RatingInput, companyId: Id, now: IsoDate): Rating {
   const company = input.companies.find((c) => c.id === companyId);
   if (!company) throw new Error(`Unknown company: ${companyId}`);
-  const withAuthorWeight = options.withAuthorWeight ?? true;
 
   const values: Record<RatingComponentKey, number | null> = {
-    reviews: reviewsComponent(input, companyId, now, withAuthorWeight),
+    reviews: reviewsComponent(input, companyId, now),
     verification: verificationComponent(company, now),
     claims: claimsComponent(input, companyId),
     activity: activityComponent(input, company, now),

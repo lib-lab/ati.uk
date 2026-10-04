@@ -1,24 +1,16 @@
-// Linked-accounts detector (TZ: "Protection against manipulation"): behavioural signals
-// that give a yellow flag and a manual review by the moderator.
+// Strong signals only (see DECISIONS "Review weight" and "Detector"). Mutual reviews of
+// honest partners are not a signal: doubtful reviews lose weight instead of getting a flag.
 import { CONFIG } from '../config';
-import { daysBetween } from '../time';
-import type { AppState, Id, Review } from '../types';
+import { monthsBetween } from '../time';
+import type { AppState, Id, IsoDate } from '../types';
+import { reviewGroup } from './reviewWeight';
 
-/**
- * Partners who worked together often review each other honestly, so a mutual review alone is not
- * suspicious. Reciprocal top marks written within a few days of each other are (see DECISIONS).
- */
-export function isReciprocalPraise(a: Review, b: Review): boolean {
-  const d = CONFIG.detector;
-  return a.stars >= d.praiseStars && b.stars >= d.praiseStars && Math.abs(daysBetween(a.createdAt, b.createdAt)) <= d.mutualWithinDays;
-}
-
-export type SignalKind = 'shared_device' | 'mutual_reviews' | 'reviews_without_listings';
+export type SignalKind = 'shared_device' | 'closed_ring';
 
 export interface Signal {
   kind: SignalKind;
-  /** The other company for pair signals. */
-  withId?: Id;
+  /** Other companies involved: the device sharer, or the other ring members. */
+  withIds: Id[];
 }
 
 export interface Suspicion {
@@ -26,22 +18,35 @@ export interface Suspicion {
   signals: Signal[];
 }
 
-export function detectLinkedAccounts(state: Pick<AppState, 'companies' | 'reviews' | 'listings'>): Suspicion[] {
-  const result: Suspicion[] = [];
-  for (const c of state.companies) {
-    const signals: Signal[] = [];
-    for (const other of state.companies) {
-      if (other.id !== c.id && other.deviceId === c.deviceId) signals.push({ kind: 'shared_device', withId: other.id });
-    }
-    const written = state.reviews.filter((r) => r.authorId === c.id && !r.voided);
-    for (const r of written) {
-      const back = state.reviews.some((x) => x.authorId === r.targetId && x.targetId === c.id && !x.voided && isReciprocalPraise(r, x));
-      if (back && !signals.some((s) => s.kind === 'mutual_reviews' && s.withId === r.targetId)) {
-        signals.push({ kind: 'mutual_reviews', withId: r.targetId });
-      }
-    }
-    if (written.length > 0 && !state.listings.some((l) => l.ownerId === c.id)) signals.push({ kind: 'reviews_without_listings' });
-    if (signals.length > 0) result.push({ companyId: c.id, signals });
+export type DetectorInput = Pick<AppState, 'companies' | 'reviews' | 'contactAccesses' | 'claims'>;
+
+/** Groups of ≥ ringMinSize new companies whose interactions stay (almost) entirely inside the group. */
+export function closedRings(state: DetectorInput, now: IsoDate): Id[][] {
+  const d = CONFIG.detector;
+  const isNew = (id: Id) => {
+    const c = state.companies.find((x) => x.id === id);
+    return !!c && monthsBetween(c.joinedAt, now) < d.ringNewMonths;
+  };
+  const rings = new Map<string, Id[]>();
+  for (const r of state.reviews) {
+    if (r.voided) continue;
+    const g = reviewGroup(state, r.authorId, r.targetId);
+    if (g.members.length < d.ringMinSize || g.closedShare < d.ringClosedShare || !g.members.every(isNew)) continue;
+    const members = [...g.members].sort();
+    rings.set(members.join(','), members);
   }
-  return result;
+  return [...rings.values()];
+}
+
+export function detectSuspicions(state: DetectorInput, now: IsoDate): Suspicion[] {
+  const byCompany = new Map<Id, Signal[]>();
+  const add = (id: Id, signal: Signal) => byCompany.set(id, [...(byCompany.get(id) ?? []), signal]);
+  for (const c of state.companies) {
+    const sharers = state.companies.filter((o) => o.id !== c.id && o.deviceId === c.deviceId).map((o) => o.id);
+    if (sharers.length > 0) add(c.id, { kind: 'shared_device', withIds: sharers });
+  }
+  for (const ring of closedRings(state, now)) {
+    for (const id of ring) add(id, { kind: 'closed_ring', withIds: ring.filter((x) => x !== id) });
+  }
+  return [...byCompany.entries()].map(([companyId, signals]) => ({ companyId, signals }));
 }

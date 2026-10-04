@@ -4,7 +4,7 @@ import { addNotification } from '../notifications';
 import { withRatingEvents } from '../ratingEvents';
 import { canComplain, reachesHideThreshold, refundFor } from '../rules/complaints';
 import { findAccess } from '../rules/contactAccess';
-import { detectLinkedAccounts, type Suspicion } from '../rules/detector';
+import { detectSuspicions, type Suspicion } from '../rules/detector';
 import { activeFlags, FLAG_LEVEL } from '../rules/flags';
 import type { AppState, Complaint, ComplaintType, Flag, FlagKind, Id } from '../types';
 import { MODERATOR_ID } from '../types';
@@ -204,13 +204,13 @@ export function confirmFraud(state: AppState, flagId: Id): CommandResult {
 // ---------- Detector ----------
 
 /** Yellow flags for new suspicions. Companies the moderator already cleared are not flagged again. */
-export function applyDetector(state: AppState, suspicions: Suspicion[] = detectLinkedAccounts(state)): AppState {
+export function applyDetector(state: AppState, suspicions: Suspicion[] = detectSuspicions(state, state.now)): AppState {
   let s = state;
   for (const sus of suspicions) {
     const flags = s.flags.filter((f) => f.companyId === sus.companyId && f.kind === 'suspected_linked');
     if (flags.length > 0) continue; // active, or resolved earlier by the moderator
     if (activeFlags(s.flags, sus.companyId).some((f) => f.kind === 'fraud_blocked')) continue;
-    const note = sus.signals.map((x) => (x.withId ? `${x.kind}:${x.withId}` : x.kind)).join(', ');
+    const note = sus.signals.map((x) => `${x.kind}: ${x.withIds.join(', ')}`).join('; ');
     s = addFlag(s, sus.companyId, 'suspected_linked', 'detector', note);
   }
   return s;

@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { activeFlags } from '../../domain/rules/flags';
-import { countedReviews, recencyWeight } from '../../domain/rules/rating';
+import { countedReviews } from '../../domain/rules/rating';
+import { reviewWeight } from '../../domain/rules/reviewWeight';
 import { canReply, canSettleClaim } from '../../domain/rules/reviews';
 import { explainRating, type ComponentExplanation } from '../../domain/rules/ratingExplain';
 import type { AppState, Claim, Review } from '../../domain/types';
@@ -144,7 +145,13 @@ function ComponentPanel({ state, companyId, c }: { state: AppState; companyId: s
 
 function ReviewItem({ state, review }: { state: AppState; review: Review }) {
   const counted = countedReviews(state, review.targetId).some((r) => r.id === review.id);
-  const old = recencyWeight(review, state.now) < 1;
+  const w = reviewWeight(state, review, state.now);
+  const factors = [
+    w.recency < 1 && t('company.review.factor.old', { w: w.recency }),
+    w.contactCost < 1 && t('company.review.factor.free', { w: w.contactCost }),
+    w.author < 1 && t('company.review.factor.author', { w: w.author.toFixed(2) }),
+    w.independence < 1 && t('company.review.factor.group', { w: w.independence }),
+  ].filter(Boolean);
   return (
     <li className="list-item review">
       <div>
@@ -153,7 +160,12 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
         <span className="muted small">{formatDate(review.createdAt)}</span>
         {review.voided && <span className="badge badge-neutral">{t('company.review.voided')}</span>}
         {!review.voided && !counted && <span className="badge badge-yellow">{t('company.review.notCounted')}</span>}
-        {counted && old && <span className="badge badge-neutral">{t('company.review.old')}</span>}
+        {counted && (
+          <span className="badge badge-neutral" title={factors.join(' · ')}>
+            {t('company.review.weight', { w: w.total.toFixed(2) })}
+            {factors.length > 0 && `: ${factors.join(' · ')}`}
+          </span>
+        )}
       </div>
       {review.text && <div>{review.text}</div>}
       {review.reply && <div className="reply small"><span className="muted">{t('company.review.reply')}</span> {review.reply.text}</div>}

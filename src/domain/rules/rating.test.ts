@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeedState } from '../../seed';
 import { addDays } from '../time';
-import { company, cargo, emptyState, NOW, review } from '../testing/fixtures';
+import { cargo, company, emptyState, NOW, review } from '../testing/fixtures';
 import type { Claim, Flag } from '../types';
 import {
   activityComponent,
@@ -19,11 +19,28 @@ const claim = (targetId: string, status: Claim['status']): Claim => ({
   id: `cl-${targetId}-${status}-${Math.random()}`, claimantId: 'x', targetId, text: '', status, createdAt: NOW,
 });
 
+/**
+ * Authors with full weight: 20+ months on the platform, 20 listings, paid contact of the target,
+ * and contacts with outside companies (so they are not a closed group).
+ */
+function trusted(authors: string[], target = 't') {
+  const outside = ['o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7'];
+  return emptyState({
+    companies: [...authors, target, ...outside].map((id) => company(id)),
+    listings: authors.flatMap((a) => Array.from({ length: 20 }, (_, i) => cargo(`${a}-l${i}`, a))),
+    contactAccesses: authors.flatMap((a) => [
+      { id: `${a}-t`, viewerId: a, ownerId: target, firstListingId: '', openedAt: NOW, paidWith: 'balance' as const },
+      ...outside.map((o) => ({ id: `${a}-${o}`, viewerId: a, ownerId: o, firstListingId: '', openedAt: NOW, paidWith: 'balance' as const })),
+    ]),
+  });
+}
+
 describe('reviews component', () => {
-  it('maps the average 1..5 to 0..100', () => {
-    const s = emptyState({ companies: [company('a'), company('t')], reviews: [review('a', 't', 5), review('a', 't', 3)] });
-    // author "a" has no reviews → its score is below 70 → weight 1
-    expect(reviewsComponent(s, 't', NOW)).toBe(75);
+  it('maps the weighted average (with the neutral 3★ prior) to 0..100', () => {
+    const s = trusted(['a', 'b']);
+    s.reviews = [review('a', 't', 5), review('b', 't', 3)];
+    // (5 + 3 + 3×1) / 3 = 3.667 → 66.67
+    expect(reviewsComponent(s, 't', NOW)).toBeCloseTo(66.67, 1);
   });
 
   it('is unavailable without counted reviews', () => {
@@ -31,34 +48,20 @@ describe('reviews component', () => {
   });
 
   it('gives reviews older than 12 months half the weight', () => {
-    const s = emptyState({
-      companies: [company('a'), company('t')],
-      reviews: [review('a', 't', 5, 10), review('a', 't', 1, 400)],
-    });
-    // (5*1 + 1*0.5) / 1.5 = 3.667 → (3.667-1)/4*100 = 66.67
-    expect(reviewsComponent(s, 't', NOW)).toBeCloseTo(66.67, 1);
-  });
-
-  it('gives authors with a high score more weight', () => {
-    const fans = ['f1', 'f2', 'f3'];
-    const s = emptyState({
-      companies: [company('hi'), company('lo', { verification: { ...company('lo').verification, record: null, matchesProfile: false } }), company('t'), ...fans.map((f) => company(f))],
-      // "hi" has strong reviews itself → score ≥ 70
-      reviews: [...fans.map((f) => review(f, 'hi', 5)), review('hi', 't', 5), review('lo', 't', 1)],
-    });
-    expect(computeRating(s, 'hi', NOW, { withAuthorWeight: false }).score).toBeGreaterThanOrEqual(70);
-    expect(computeRating(s, 'lo', NOW, { withAuthorWeight: false }).score).toBeLessThan(70);
-    // (5*1.5 + 1*1) / 2.5 = 3.4 → 60
+    const s = trusted(['a', 'b']);
+    s.reviews = [review('a', 't', 5, 10), review('b', 't', 1, 400)];
+    // (5×1 + 1×0.5 + 3×1) / 2.5 = 3.4 → 60
     expect(reviewsComponent(s, 't', NOW)).toBeCloseTo(60, 5);
   });
 
-  it('ignores reviews from authors with a yellow flag and voided reviews', () => {
+  it('gives reviews from authors with a yellow flag and voided reviews weight 0', () => {
     const s = emptyState({
       companies: [company('a'), company('b'), company('t')],
       reviews: [review('a', 't', 1), { ...review('b', 't', 1), voided: true }],
       flags: [flag('a', 'suspected_linked', 'yellow')],
     });
-    expect(reviewsComponent(s, 't', NOW)).toBeNull();
+    // weight 0: the component stays available at the neutral prior (50), never "no data"
+    expect(reviewsComponent(s, 't', NOW)).toBe(50);
     expect(computeRating(s, 't', NOW).countedReviews).toBe(0);
   });
 });

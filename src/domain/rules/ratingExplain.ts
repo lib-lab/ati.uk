@@ -3,8 +3,8 @@
 import { CONFIG } from '../config';
 import { addDays, daysBetween, isBefore, monthsBetween } from '../time';
 import type { Id, IsoDate, RatingComponentKey } from '../types';
-import { activeFlags } from './flags';
-import { authorWeight, computeRating, countedReviews, recencyWeight, type RatingInput } from './rating';
+import { computeRating, weightedAverage, weightedReviews, type RatingInput } from './rating';
+import type { ReviewWeight } from './reviewWeight';
 
 const R = CONFIG.rating;
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -35,35 +35,30 @@ export interface RatingExplanation {
 const round1 = (x: number) => Math.round(x * 10) / 10;
 
 function reviewsLines(input: RatingInput, id: Id, now: IsoDate): ExplainLine[] {
-  const all = input.reviews.filter((r) => r.targetId === id);
-  const counted = countedReviews(input, id);
-  const lines: ExplainLine[] = [];
-  if (counted.length === 0) {
-    lines.push({ key: 'explain.reviews.none', params: {}, points: null });
-  } else {
-    let sum = 0;
-    let weights = 0;
-    let old = 0;
-    let highAuthors = 0;
-    for (const r of counted) {
-      const recency = recencyWeight(r, now);
-      const author = authorWeight(input, r.authorId, now);
-      if (recency < 1) old++;
-      if (author > 1) highAuthors++;
-      sum += r.stars * recency * author;
-      weights += recency * author;
-    }
-    const avg = sum / weights;
-    lines.push({ key: 'explain.reviews.average', params: { avg: round1(avg), count: counted.length }, points: ((avg - 1) / 4) * 100 });
-    if (old > 0) lines.push({ key: 'explain.reviews.old', params: { count: old, weight: R.reviews.oldWeight }, points: null });
-    if (highAuthors > 0) {
-      lines.push({ key: 'explain.reviews.highAuthors', params: { count: highAuthors, weight: R.reviews.highRatedAuthorWeight }, points: null });
-    }
-  }
-  const voided = all.filter((r) => r.voided).length;
-  const flaggedAuthors = all.filter(
-    (r) => !r.voided && activeFlags(input.flags, r.authorId).some((f) => f.kind === 'suspected_linked'),
-  ).length;
+  const items = weightedReviews(input, id, now);
+  if (items.length === 0) return [{ key: 'explain.reviews.none', params: {}, points: null }];
+  const counted = items.filter((x) => x.counted);
+  const avg = weightedAverage(items.map((x) => ({ stars: x.review.stars, weight: x.weight?.total ?? 0 })));
+  const effective = counted.reduce((sum, x) => sum + x.weight!.total, 0);
+  const lines: ExplainLine[] = [
+    {
+      key: 'explain.reviews.average',
+      params: { avg: round1(avg), count: counted.length, effective: round1(effective) },
+      points: ((avg - 1) / 4) * 100,
+    },
+    { key: 'explain.reviews.prior', params: { stars: R.reviews.prior.stars, weight: R.reviews.prior.weight }, points: null },
+  ];
+  const count = (pred: (w: ReviewWeight) => boolean) => counted.filter((x) => pred(x.weight!)).length;
+  const old = count((w) => w.recency < 1);
+  const free = count((w) => w.contactCost < 1);
+  const newAuthors = count((w) => w.author < 1);
+  const group = count((w) => w.independence < 1);
+  if (old > 0) lines.push({ key: 'explain.reviews.old', params: { count: old, weight: R.reviews.oldWeight }, points: null });
+  if (free > 0) lines.push({ key: 'explain.reviews.freeContact', params: { count: free, weight: R.reviews.contactCost.open_listing }, points: null });
+  if (newAuthors > 0) lines.push({ key: 'explain.reviews.authors', params: { count: newAuthors, min: R.reviews.author.minWeight }, points: null });
+  if (group > 0) lines.push({ key: 'explain.reviews.closedGroup', params: { count: group, weight: R.reviews.independence.groupWeight }, points: null });
+  const voided = items.filter((x) => x.review.voided).length;
+  const flaggedAuthors = items.filter((x) => !x.counted && !x.review.voided).length;
   if (flaggedAuthors > 0) lines.push({ key: 'explain.reviews.flaggedAuthors', params: { count: flaggedAuthors }, points: null });
   if (voided > 0) lines.push({ key: 'explain.reviews.voided', params: { count: voided }, points: null });
   return lines;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildSeedState } from '../../seed';
 import { CONFIG } from '../config';
 import { freeContactsLeft } from '../rules/contactAccess';
-import { detectLinkedAccounts } from '../rules/detector';
+import { detectSuspicions } from '../rules/detector';
 import { activeFlags } from '../rules/flags';
 import { balanceOf } from '../rules/ledger';
 import { computeRating } from '../rules/rating';
@@ -147,27 +147,45 @@ describe('claims and flags', () => {
   });
 });
 
-describe('linked-accounts detector', () => {
-  it('finds the QuickRate pair by shared device and mutual reviews', () => {
+describe('detector: strong signals only', () => {
+  it('seed: QuickRate pair by shared device, the c19–c21 ring as a closed ring; honest partners untouched', () => {
     const seed = buildSeedState();
-    const found = detectLinkedAccounts(seed);
-    const c13 = found.find((x) => x.companyId === 'c13')!;
-    expect(c13.signals).toEqual(expect.arrayContaining([{ kind: 'shared_device', withId: 'c14' }, { kind: 'mutual_reviews', withId: 'c14' }]));
-    expect(found.map((x) => x.companyId).sort()).toEqual(['c13', 'c14']);
+    const found = detectSuspicions(seed, seed.now);
+    expect(found.map((x) => x.companyId).sort()).toEqual(['c13', 'c14', 'c19', 'c20', 'c21']);
+    expect(found.find((x) => x.companyId === 'c13')!.signals).toEqual([{ kind: 'shared_device', withIds: ['c14'] }]);
+    expect(found.find((x) => x.companyId === 'c19')!.signals).toEqual([{ kind: 'closed_ring', withIds: ['c20', 'c21'] }]);
   });
 
-  it('flags new suspicions yellow, skips already flagged or cleared companies', () => {
-    let s = emptyState({
-      companies: [company('a', { deviceId: 'same' }), company('b', { deviceId: 'same' }), company('c')],
-      reviews: [review('c', 'a', 5)], // c has no listings
-      actorId: MODERATOR_ID,
+  it('mutual reviews of partners with outside activity are not a signal', () => {
+    const s = emptyState({
+      companies: ['a', 'b', 'x', 'y'].map((id) => company(id, { joinedAt: addDays(NOW, -30) })),
+      reviews: [review('a', 'b', 5, 3), review('b', 'a', 5, 2)],
+      contactAccesses: [
+        { id: 'a1', viewerId: 'a', ownerId: 'b', firstListingId: '', openedAt: NOW, paidWith: 'balance' },
+        { id: 'a2', viewerId: 'b', ownerId: 'a', firstListingId: '', openedAt: NOW, paidWith: 'balance' },
+        { id: 'a3', viewerId: 'a', ownerId: 'x', firstListingId: '', openedAt: NOW, paidWith: 'balance' },
+        { id: 'a4', viewerId: 'y', ownerId: 'b', firstListingId: '', openedAt: NOW, paidWith: 'balance' },
+      ],
     });
+    expect(detectSuspicions(s, NOW)).toEqual([]);
+  });
+
+  it('a ring of old companies is not flagged (only new companies form a suspicious ring)', () => {
+    const seed = buildSeedState();
+    const aged = { ...seed, now: addDays(seed.now, 365) };
+    expect(detectSuspicions(aged, aged.now).some((x) => x.signals.some((sig) => sig.kind === 'closed_ring'))).toBe(false);
+  });
+
+  it('flags new suspicions yellow and skips companies the moderator already cleared', () => {
+    let s = as(buildSeedState(), MODERATOR_ID);
     s = ok(runDetector(s));
-    expect(s.flags.map((f) => [f.companyId, f.kind, f.source])).toEqual([
-      ['a', 'suspected_linked', 'detector'], ['b', 'suspected_linked', 'detector'], ['c', 'suspected_linked', 'detector'],
+    const ringFlags = s.flags.filter((f) => ['c19', 'c20', 'c21'].includes(f.companyId) && !f.resolvedAt);
+    expect(ringFlags.map((f) => [f.kind, f.source])).toEqual([
+      ['suspected_linked', 'detector'], ['suspected_linked', 'detector'], ['suspected_linked', 'detector'],
     ]);
-    // moderator clears "a"; the detector does not flag it again
-    s = ok(resolveFlag(s, s.flags[0]!.id));
-    expect(applyDetector(s).flags.filter((f) => f.companyId === 'a')).toHaveLength(1);
+    // c13/c14 already had a flag: no duplicates
+    expect(s.flags.filter((f) => f.companyId === 'c13' && f.kind === 'suspected_linked')).toHaveLength(1);
+    s = ok(resolveFlag(s, ringFlags[0]!.id));
+    expect(applyDetector(s).flags.filter((f) => f.companyId === ringFlags[0]!.companyId)).toHaveLength(1);
   });
 });

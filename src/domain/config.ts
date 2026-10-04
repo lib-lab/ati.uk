@@ -22,11 +22,22 @@ export const CONFIG = {
   rating: {
     weights: { reviews: 35, verification: 30, claims: 20, activity: 15 },
     newMemberReviewThreshold: 3,
+    // Review weight = recency × contact cost × author × independence (see DECISIONS "Review weight").
     reviews: {
       oldAfterMonths: 12,
       oldWeight: 0.5,
-      highRatedAuthorScore: 70, // [A]
-      highRatedAuthorWeight: 1.5, // [A]
+      /** Neutral prior added to every average: a few low-weight reviews cannot reach the top. [A] */
+      prior: { stars: 3, weight: 1 },
+      /** How the author got the contact. Free (open listing) or refunded contacts weigh less. [A] */
+      contactCost: { balance: 1, package: 1, free_quota: 1, open_listing: 0.5, refunded: 0.5 },
+      /** Author standing grows with tenure and activity (listings posted + contacts opened). [A] */
+      author: { minWeight: 0.3, fullTenureMonths: 12, fullActivity: 20, tenureShare: 0.5 },
+      /**
+       * Independence: the group of a review A→B is A, B and their common review partners.
+       * If the group is small and most of its members' interactions stay inside it, reviews
+       * within the group weigh less. [A]
+       */
+      independence: { maxGroupSize: 6, closedShare: 0.8, groupWeight: 0.3 },
     },
     verification: {
       // shares inside the component, sum = 1  [A]
@@ -54,8 +65,11 @@ export const CONFIG = {
 
   complaints: { hideThreshold: 3, windowDays: 30 },
 
-  /** Linked-accounts detector: reciprocal top marks within a few days are suspicious. [A] */
-  detector: { praiseStars: 5, mutualWithinDays: 7 },
+  /**
+   * Yellow flag only for strong signals: a device shared by different companies, or a closed
+   * ring of new companies whose interactions stay inside the ring. [A]
+   */
+  detector: { ringMinSize: 3, ringNewMonths: 6, ringClosedShare: 0.95 },
 
   inactivity: { deactivateAfterMonths: 6 },
 

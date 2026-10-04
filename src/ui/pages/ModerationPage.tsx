@@ -7,7 +7,7 @@ import type { CommandResult } from '../../domain/commands/result';
 import { settleClaim } from '../../domain/commands/reviews';
 import { confirmedComplaintsInWindow, refundFor } from '../../domain/rules/complaints';
 import { findAccess } from '../../domain/rules/contactAccess';
-import { detectLinkedAccounts } from '../../domain/rules/detector';
+import { detectSuspicions } from '../../domain/rules/detector';
 import { MODERATOR_ID, type AppState, type Complaint } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { FlagBadge } from '../components/FlagBadge';
@@ -106,7 +106,7 @@ function Flags({ state, run }: { state: AppState; run: (c: (s: AppState) => Comm
   const [companyId, setCompanyId] = useState('');
   const [kind, setKind] = useState<'fraud_blocked' | 'suspected_linked'>('fraud_blocked');
   const [note, setNote] = useState('');
-  const suspicions = useMemo(() => detectLinkedAccounts(state), [state]);
+  const suspicions = useMemo(() => detectSuspicions(state, state.now), [state]);
   const flags = state.flags.filter((f) => !f.resolvedAt);
 
   return (
@@ -156,7 +156,7 @@ function Flags({ state, run }: { state: AppState; run: (c: (s: AppState) => Comm
           {suspicions.map((sus) => (
             <li key={sus.companyId}>
               <Link to={`/company/${sus.companyId}`}>{companyName(state, sus.companyId)}</Link>:{' '}
-              {sus.signals.map((sig) => t(`signal.${sig.kind}`, { with: sig.withId ? companyName(state, sig.withId) ?? sig.withId : '' })).join('; ')}
+              {sus.signals.map((sig) => t(`signal.${sig.kind}`, { with: sig.withIds.map((id) => companyName(state, id) ?? id).join(', ') })).join('; ')}
             </li>
           ))}
         </ul>

@@ -24,9 +24,10 @@ import {
 } from '../domain/types';
 import { COMPANY_SPECS, type Archetype, type CompanySpec } from './companies';
 import { createRng, type Rng } from './random';
+import { buildRing, RING_SPECS } from './ring';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 
@@ -72,6 +73,7 @@ const REVIEW_PLAN: Record<Archetype, [number, number[]]> = {
   inactive: [6, [4, 5, 4]],
   blocked: [3, [1, 2, 1]],
   no_free_contacts: [5, [4, 5, 4, 3]],
+  ring: [0, []], // built separately in ring.ts
 };
 
 /** Past (removed/expired) listings per archetype: [count, share removed as found_on_platform]. */
@@ -88,6 +90,7 @@ const HISTORY_PLAN: Record<Archetype, [number, number]> = {
   inactive: [8, 0.5],
   blocked: [3, 0],
   no_free_contacts: [6, 0.5],
+  ring: [0, 0],
 };
 
 export interface SeedMeta {
@@ -96,7 +99,7 @@ export interface SeedMeta {
 }
 
 export const SEED_META: SeedMeta = {
-  notes: Object.fromEntries(COMPANY_SPECS.map((s) => [s.id, s.note])),
+  notes: Object.fromEntries([...COMPANY_SPECS, ...RING_SPECS].map((s) => [s.id, s.note])),
 };
 
 export function buildSeedState(): AppState {
@@ -271,6 +274,16 @@ export function buildSeedState(): AppState {
     }
   }
   transactions.push(...debits, ...fees);
+
+  // ----- closed ring of new companies (independent of the PRNG) -----
+  const ringCompanies = RING_SPECS.map((spec) => buildCompany(spec, now));
+  const ring = buildRing(now, (id) => ringCompanies.find((c) => c.id === id)!.joinedAt);
+  companies.push(...ringCompanies);
+  listings.push(...ring.listings);
+  accesses.push(...ring.accesses);
+  reviews.push(...ring.reviews);
+  transactions.push(...ring.transactions);
+
   transactions.sort((a, b) => toMs(a.createdAt) - toMs(b.createdAt));
 
   return {
