@@ -27,6 +27,7 @@ export function createStore(storage: KeyValueStorage | undefined): Store {
     run(command) {
       const result = command(state);
       if (result.ok) set(result.state);
+      else if (result.state) set(result.state);
       return result;
     },
     reset() {

@@ -11,6 +11,25 @@ export type CommandError =
   | 'listing_not_active'
   | 'already_open'
   | 'already_priority'
-  | 'template_not_found';
+  | 'template_not_found'
+  | 'invalid_review'
+  | 'review_not_allowed'
+  | 'review_too_soon'
+  | 'invalid_claim'
+  | 'claim_not_allowed'
+  | 'complaint_not_allowed'
+  | 'not_found'
+  | 'daily_limit'
+  | 'human_check_required'
+  | 'slow_down'
+  | 'collection_blocked'
+  | 'no_history'
+  | 'refund_not_available'
+  | 'account_deleted'
+  | 'confirmation_mismatch';
 
-export type CommandResult = { ok: true; state: AppState } | { ok: false; error: CommandError };
+/**
+ * A failed command may still carry a state to keep (e.g. a failed human check is counted):
+ * the store persists `state` when present.
+ */
+export type CommandResult = { ok: true; state: AppState } | { ok: false; error: CommandError; state?: AppState };

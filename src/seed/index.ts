@@ -4,7 +4,7 @@ import { CITIES } from '../domain/geo/cities';
 import { roadDistanceKm } from '../domain/geo/distance';
 import { FLAG_LEVEL, flagKindsFromVerification, profileMatchesRecord } from '../domain/rules/flags';
 import { computeExpiresAt } from '../domain/rules/lifetime';
-import { addDays, addHours, daysBetween, fromMs, isBefore, startOfDay, toMs } from '../domain/time';
+import { addDays, addHours, addMonths, daysBetween, fromMs, isBefore, startOfDay, toMs } from '../domain/time';
 import {
   type AppState,
   type BodyType,
@@ -12,6 +12,7 @@ import {
   type Claim,
   type Company,
   type ContactAccess,
+  type ContactOpening,
   type Flag,
   type IsoDate,
   type LedgerTransaction,
@@ -24,9 +25,11 @@ import {
 } from '../domain/types';
 import { COMPANY_SPECS, type Archetype, type CompanySpec } from './companies';
 import { createRng, type Rng } from './random';
+import { buildClients, CLIENT_SPECS } from './clients';
+import { buildRing, RING_SPECS } from './ring';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 6;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 
@@ -72,6 +75,8 @@ const REVIEW_PLAN: Record<Archetype, [number, number[]]> = {
   inactive: [6, [4, 5, 4]],
   blocked: [3, [1, 2, 1]],
   no_free_contacts: [5, [4, 5, 4, 3]],
+  ring: [0, []], // built separately in ring.ts
+  client: [0, []], // built separately in clients.ts
 };
 
 /** Past (removed/expired) listings per archetype: [count, share removed as found_on_platform]. */
@@ -88,6 +93,8 @@ const HISTORY_PLAN: Record<Archetype, [number, number]> = {
   inactive: [8, 0.5],
   blocked: [3, 0],
   no_free_contacts: [6, 0.5],
+  ring: [0, 0],
+  client: [0, 0],
 };
 
 export interface SeedMeta {
@@ -96,7 +103,7 @@ export interface SeedMeta {
 }
 
 export const SEED_META: SeedMeta = {
-  notes: Object.fromEntries(COMPANY_SPECS.map((s) => [s.id, s.note])),
+  notes: Object.fromEntries([...COMPANY_SPECS, ...RING_SPECS].map((s) => [s.id, s.note])),
 };
 
 export function buildSeedState(): AppState {
@@ -113,12 +120,18 @@ export function buildSeedState(): AppState {
   // ----- flags -----
   const flags: Flag[] = [];
   const addFlag = (companyId: string, kind: Flag['kind'], source: Flag['source'], createdAt: IsoDate, note?: string) =>
-    flags.push({ id: nextId('f', 'flag', 2), companyId, kind, level: FLAG_LEVEL[kind], source, createdAt, note });
+    flags.push({
+      id: nextId('f', 'flag', 2), companyId, kind, level: FLAG_LEVEL[kind], source, createdAt, note,
+      dueAt: kind === 'data_mismatch' ? addDays(createdAt, CONFIG.dataMismatchGraceDays) : undefined,
+    });
   for (const c of companies) {
-    for (const kind of flagKindsFromVerification(c.verification)) addFlag(c.id, kind, 'registry', c.verification.checkedAt);
+    for (const kind of flagKindsFromVerification(c.verification)) {
+      // The mismatch was found 5 days ago: yellow "Clarify your data" for 9 more days, then red.
+      const at = kind === 'data_mismatch' ? addDays(now, -5) : c.verification.checkedAt;
+      addFlag(c.id, kind, 'registry', at);
+    }
   }
-  addFlag('c13', 'suspected_linked', 'detector', addDays(now, -6), 'Shared device with c14, mutual reviews');
-  addFlag('c14', 'suspected_linked', 'detector', addDays(now, -6), 'Shared device with c13, mutual reviews');
+  // c13/c14 share a device: no flag (TZ), their mutual reviews just weigh less.
   addFlag('c18', 'fraud_blocked', 'moderator', addDays(now, -15), 'Confirmed fraud: fake cargo listings');
 
   // ----- contact accesses (+ their payments) -----
@@ -150,8 +163,11 @@ export function buildSeedState(): AppState {
   const addReview = (authorId: string, targetId: string, stars: Review['stars'], createdAt: IsoDate) => {
     const openedAt = addDays(createdAt, -rng.int(1, 10));
     ensureAccess(authorId, targetId, openedAt);
+    const id = nextId('r', 'review', 3);
     reviews.push({
-      id: nextId('r', 'review', 3), authorId, targetId, stars, createdAt,
+      id, authorId, targetId, stars, createdAt,
+      // Deterministic, without the PRNG: every fifth review is about the contact only (no deal).
+      dealHappened: counters.review % 5 !== 0,
       text: rng.pick(REVIEW_TEXTS[stars] ?? ['']),
     });
   };
@@ -197,17 +213,18 @@ export function buildSeedState(): AppState {
     ensureAccess(claimantId, targetId, addDays(createdAt, -5));
     claims.push({
       id: nextId('cl', 'claim', 2), claimantId, targetId, text, status, createdAt,
-      resolvedAt: status === 'open' ? undefined : addDays(createdAt, 10),
+      confirmedAt: status === 'confirmed' ? addDays(createdAt, 3) : undefined,
+      resolvedAt: status === 'settled' || status === 'rejected' ? addDays(createdAt, 10) : undefined,
     });
   };
   addClaim('c03', 'c09', 'open', 20, 'Cargo delivered damaged, compensation not paid.');
   addClaim('c05', 'c09', 'open', 8, 'Truck did not arrive for loading, no notice.');
-  addClaim('c02', 'c10', 'open', 30, 'Freight not paid 45 days after delivery.');
+  addClaim('c02', 'c10', 'confirmed', 45, 'Freight not paid 45 days after delivery.');
   addClaim('c01', 'c16', 'settled', 120, 'Late payment.');
   addClaim('c10', 'c16', 'rejected', 60, 'Disputed waiting time charge.');
   addClaim('c09', 'c01', 'settled', 200, 'Invoice mismatch.');
   addClaim('c15', 'c18', 'open', 25, 'Paid deposit, truck never came.');
-  addClaim('c03', 'c18', 'open', 22, 'Fake cargo offer, contact disappeared.');
+  addClaim('c03', 'c18', 'open', 40, 'Fake cargo offer, contact disappeared.'); // unconfirmed > 30 days: no longer counts
 
   // ----- listings -----
   const listings: Listing[] = [];
@@ -260,6 +277,16 @@ export function buildSeedState(): AppState {
     a.firstListingId = listings.find((l) => l.ownerId === a.ownerId)?.id ?? '';
   }
 
+  // ----- regular clients of c04 and c12 (independent of the PRNG) -----
+  const clients = buildClients(now);
+  for (const spec of CLIENT_SPECS) {
+    companies.push(buildCompany(spec, now));
+    specById.set(spec.id, spec);
+  }
+  listings.push(...clients.listings);
+  accesses.push(...clients.accesses);
+  debits.push(...clients.debits);
+
   // ----- ledger: one initial top-up covering all seed debits + the target balance -----
   const transactions: LedgerTransaction[] = [];
   for (const c of companies) {
@@ -271,7 +298,28 @@ export function buildSeedState(): AppState {
     }
   }
   transactions.push(...debits, ...fees);
+
+  // ----- closed ring of new companies (independent of the PRNG) -----
+  const ringCompanies = RING_SPECS.map((spec) => buildCompany(spec, now));
+  const ring = buildRing(now, (id) => ringCompanies.find((c) => c.id === id)!.joinedAt);
+  companies.push(...ringCompanies);
+  listings.push(...ring.listings);
+  accesses.push(...ring.accesses);
+  reviews.push(...ring.reviews);
+  transactions.push(...ring.transactions);
+
   transactions.sort((a, b) => toMs(a.createdAt) - toMs(b.createdAt));
+
+  // Opening log: one entry per contact access (the opening that created it). Entries older than the
+  // retention period are already anonymised, as the daily process would have done.
+  const retentionStart = addMonths(now, -CONFIG.openingLogRetentionMonths);
+  const contactOpenings: ContactOpening[] = accesses.map((a, i) => {
+    const old = isBefore(a.openedAt, retentionStart);
+    return {
+      id: `o${String(i + 1).padStart(4, '0')}`, viewerId: old ? null : a.viewerId, ownerId: a.ownerId, listingId: a.firstListingId,
+      at: a.openedAt, createdAccess: true, viaCard: true, anonymizedAt: old ? now : undefined,
+    };
+  });
 
   return {
     version: STATE_VERSION,
@@ -280,12 +328,15 @@ export function buildSeedState(): AppState {
     companies,
     listings,
     contactAccesses: accesses,
+    contactOpenings,
+    listingChanges: [],
     transactions,
     packages: [],
     reviews,
     claims,
     complaints: [],
     flags,
+    disputes: [],
     subscriptions: [],
     notifications: [],
     templates: [],
@@ -308,7 +359,7 @@ function buildCompany(s: CompanySpec, now: IsoDate): Company {
     regNumber: s.regNumber,
     regNumberType: s.regNumberType,
     role: s.role,
-    contactPersons: s.persons.map((p, i) => ({ id: `${s.id}-p${i + 1}`, ...p })),
+    contactPersons: s.persons.map((p, i) => ({ id: `${s.id}-p${i + 1}`, ...p, consent: { givenAt: addDays(now, -Math.round(s.joinedMonthsAgo * 30.44)) } })),
     joinedAt: addDays(now, -Math.round(s.joinedMonthsAgo * 30.44)),
     lastLoginAt: addDays(now, -s.lastLoginDaysAgo),
     status: 'active',

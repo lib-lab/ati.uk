@@ -2,6 +2,9 @@
 // (expiry, reminders, digests, deactivation... are registered by later stages).
 import { logEvent } from '../events';
 import { expiryProcess, expiryReminderProcess } from './listings';
+import { dataMismatchProcess, detectorProcess } from './moderation';
+import { inactivityProcess } from './account';
+import { openingRetentionProcess } from './privacy';
 import { withRatingEvents } from '../ratingEvents';
 import { daysBetween, isBefore, startOfDay } from '../time';
 import type { AppState, IsoDate } from '../types';
@@ -14,7 +17,14 @@ export interface TimeProcess {
 }
 
 /** Registered processes, in execution order. */
-export const TIME_PROCESSES: TimeProcess[] = [expiryReminderProcess, expiryProcess];
+export const TIME_PROCESSES: TimeProcess[] = [
+  expiryReminderProcess,
+  expiryProcess,
+  detectorProcess,
+  dataMismatchProcess,
+  inactivityProcess,
+  openingRetentionProcess,
+];
 
 /** Number of UTC day boundaries between from and to. */
 export function daysCrossed(from: IsoDate, to: IsoDate): number {

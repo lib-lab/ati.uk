@@ -15,7 +15,7 @@ export function company(id: string, overrides: Partial<Company> = {}): Company {
     regNumber: `REG-${id}`,
     regNumberType: 'NIP',
     role: 'forwarder',
-    contactPersons: [{ id: `${id}-p1`, name: `Person ${id}`, phone: '+48 600 000 000' }],
+    contactPersons: [{ id: `${id}-p1`, name: `Person ${id}`, phone: '+48 600 000 000', consent: { givenAt: addDays(NOW, -800) } }],
     joinedAt: addDays(NOW, -800),
     lastLoginAt: NOW,
     status: 'active',
@@ -60,13 +60,13 @@ export function cargo(id: string, ownerId: string, overrides: Partial<CargoListi
 
 let reviewSeq = 0;
 export function review(authorId: string, targetId: string, stars: Review['stars'], daysAgo = 10): Review {
-  return { id: `rv${++reviewSeq}`, authorId, targetId, stars, text: '', createdAt: addDays(NOW, -daysAgo) };
+  return { id: `rv${++reviewSeq}`, authorId, targetId, stars, dealHappened: true, text: '', createdAt: addDays(NOW, -daysAgo) };
 }
 
 export function emptyState(overrides: Partial<AppState> = {}): AppState {
   return {
-    version: 1, now: NOW, actorId: '', companies: [], listings: [], contactAccesses: [], transactions: [],
-    packages: [], reviews: [], claims: [], complaints: [], flags: [], subscriptions: [], notifications: [],
+    version: 1, now: NOW, actorId: '', companies: [], listings: [], contactAccesses: [], contactOpenings: [], listingChanges: [], transactions: [],
+    packages: [], reviews: [], claims: [], complaints: [], flags: [], disputes: [], subscriptions: [], notifications: [],
     templates: [], events: [], seq: 0, ...overrides,
   };
 }

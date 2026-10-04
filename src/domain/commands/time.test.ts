@@ -45,23 +45,23 @@ describe('advanceTime', () => {
 
   it('attributes rating changes made by a process to its reason', () => {
     const process: TimeProcess = {
-      reasonKey: 'r.claims',
-      run: (s) => ({ ...s, claims: [{ id: 'cl', claimantId: 'x', targetId: 'a', text: '', status: 'open', createdAt: s.now }] }),
+      reasonKey: 'r.registry',
+      run: (s) => ({ ...s, companies: s.companies.map((c) => ({ ...c, verification: { ...c.verification, matchesProfile: false } })) }),
     };
     const res = advanceTime(base, addHours(NOW, 1), [process]);
     if (!res.ok) throw new Error(res.error);
     const ev = res.state.events.find((e) => e.type === 'rating_changed');
-    expect(ev?.reasonKey).toBe('r.claims');
-    expect(ev?.rating?.components.map((c) => c.key)).toEqual(['claims']);
+    expect(ev?.reasonKey).toBe('r.registry');
+    expect(ev?.rating?.components.map((c) => c.key)).toEqual(['verification']);
   });
 
   it('recalculates ratings once per shift crossing a day, with a reason', () => {
     const seed = buildSeedState();
     const res = advanceTime(seed, addMonths(seed.now, 6));
     if (!res.ok) throw new Error(res.error);
-    const daily = res.state.events.filter((e) => e.type === 'rating_changed');
+    const daily = res.state.events.filter((e) => e.type === 'rating_changed' && e.reasonKey === 'event.rating.daily');
     expect(daily.length).toBeGreaterThan(0);
-    expect(daily.every((e) => e.reasonKey === 'event.rating.daily' && e.params.days === 182)).toBe(true);
+    expect(daily.every((e) => e.params.days === 182)).toBe(true);
     // one event per company at most
     const subjects = daily.map((e) => e.subjectIds[0]);
     expect(new Set(subjects).size).toBe(subjects.length);

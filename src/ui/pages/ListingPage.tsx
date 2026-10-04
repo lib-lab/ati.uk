@@ -1,6 +1,9 @@
 import { Link, useParams } from 'react-router-dom';
+import { publicListing } from '../../domain/rules/contactPrivacy';
 import { hasPriority } from '../../domain/rules/search';
+import type { AppState } from '../../domain/types';
 import { useAppState } from '../../store/store';
+import { ComplaintBlock } from '../components/ComplaintBlock';
 import { ContactBlock } from '../components/ContactBlock';
 import { OwnerSummary } from '../components/OwnerSummary';
 import { formatDate, formatDateTime } from '../format';
@@ -11,7 +14,9 @@ import { getCompany, getRating } from '../selectors';
 export function ListingPage() {
   const { id } = useParams();
   const state = useAppState((s) => s);
-  const listing = state.listings.find((l) => l.id === id);
+  const raw = state.listings.find((l) => l.id === id);
+  // The card works with the public projection: no contact person in its data (TZ).
+  const listing = raw ? publicListing(raw) : undefined;
 
   if (!listing) {
     return (
@@ -103,8 +108,40 @@ export function ListingPage() {
           <OwnerSummary rating={rating} company={owner} />
           <h2>{t('contact.title')}</h2>
           <ContactBlock state={state} listing={listing} ownerRating={rating} />
+          <ComplaintBlock state={state} listing={listing} />
+          {listing.ownerId === state.actorId && listing.status === 'active' && (
+            <p><Link to={`/edit/${listing.id}`} className="btn btn-small">{t('listing.edit')}</Link></p>
+          )}
         </aside>
       </div>
+      <ListingHistory state={state} listingId={listing.id} />
     </section>
+  );
+}
+
+/** Visible history of changes (TZ: "Change after a contact was opened"). */
+function ListingHistory({ state, listingId }: { state: AppState; listingId: string }) {
+  const changes = state.listingChanges.filter((c) => c.listingId === listingId).reverse();
+  return (
+    <div className="panel history">
+      <h2>{t('listing.history')}</h2>
+      {changes.length === 0 ? (
+        <p className="muted small">{t('listing.noChanges')}</p>
+      ) : (
+        <ul className="plain">
+          {changes.map((c) => (
+            <li key={c.id}>
+              <span className="muted">{formatDateTime(c.at)}</span>{' '}
+              {c.key && <span className="badge badge-yellow">{t('listing.keyChange')}</span>}
+              {c.fields.map((f) => (
+                <div key={f.field} className="small">
+                  {t(`listing.changeField.${f.field}`)}: <s className="muted">{f.before || '—'}</s> → {f.after || '—'}
+                </div>
+              ))}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

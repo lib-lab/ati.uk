@@ -12,7 +12,7 @@ export type RatingOf = (companyId: Id) => Rating;
 
 /** Owner's listings are hidden from everyone but the owner. */
 export function ownerListingsHidden(company: Company, flags: AppState['flags']): boolean {
-  return company.status === 'deactivated' || company.listingsHiddenUntilContactConfirmed || isBlocked(flags, company.id);
+  return company.status !== 'active' || company.listingsHiddenUntilContactConfirmed || isBlocked(flags, company.id);
 }
 
 export function isVisibleInSearch(state: Pick<AppState, 'companies' | 'flags'>, listing: Listing, now: IsoDate): boolean {
@@ -60,20 +60,22 @@ export function matchesFilters(listing: Listing, f: SearchFilters, ratingOf?: Ra
   if (!inRange(listing.weightT, f.weightMin, f.weightMax)) return false;
   if (!inRange(listing.volumeM3, f.volumeMin, f.volumeMax)) return false;
   if (f.loadingMethods?.length && !listing.loadingMethods.some((m) => f.loadingMethods!.includes(m))) return false;
-  if (ratingOf && (f.minRating !== undefined || f.noRedFlags)) {
+  if (ratingOf && (f.minRating !== undefined || f.noRedFlags || f.onlyRated)) {
     const r = ratingOf(listing.ownerId);
-    if (f.minRating !== undefined && r.score < f.minRating) return false;
+    // New members have no rating yet: the minimum does not cut them, "only rated" does (TZ).
+    if (f.onlyRated && r.isNewMember) return false;
+    if (f.minRating !== undefined && !r.isNewMember && r.score < f.minRating) return false;
     if (f.noRedFlags && r.redFlags.length > 0) return false;
   }
   return true;
 }
 
-export function hasPriority(listing: Listing, now: IsoDate): boolean {
+export function hasPriority(listing: Pick<Listing, 'priorityUntil'>, now: IsoDate): boolean {
   return !!listing.priorityUntil && toMs(now) < toMs(listing.priorityUntil);
 }
 
 /** Rate per km in cents, or null without a fixed rate or a known destination. */
-export function ratePerKm(l: Listing): number | null {
+export function ratePerKm(l: Pick<Listing, 'rate' | 'from' | 'to'>): number | null {
   if (l.rate.mode !== 'fixed' || l.rate.amount === undefined || 'any' in l.to) return null;
   const km = roadDistanceKm(l.from.cityId, l.to.cityId);
   return km > 0 ? l.rate.amount / km : null;

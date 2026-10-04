@@ -87,8 +87,12 @@ export function SearchPage() {
         </fieldset>
         <label>
           <span>{t('search.minRating')}</span>
-          <input id="f-minrating" type="number" min={0} max={100} step={5} placeholder="0–100" value={filters.minRating ?? ''}
+          <input id="f-minrating" type="number" min={0} max={100} step={5} placeholder="0–100" title={t('search.minRatingHint')} value={filters.minRating ?? ''}
             onChange={(e) => set({ minRating: num(e.target.value) })} />
+        </label>
+        <label className="checkbox">
+          <input id="f-onlyrated" type="checkbox" checked={filters.onlyRated ?? false} onChange={(e) => set({ onlyRated: e.target.checked || undefined })} />
+          <span>{t('search.onlyRated')}</span>
         </label>
         <label className="checkbox">
           <input id="f-nored" type="checkbox" checked={filters.noRedFlags ?? false} onChange={(e) => set({ noRedFlags: e.target.checked || undefined })} />

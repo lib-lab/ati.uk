@@ -19,7 +19,9 @@ describe('withRatingEvents', () => {
     const changed = e.rating!.components;
     // The reviews component became available; the others changed weight but not value.
     expect(changed.map((c) => c.key)).toEqual(['reviews']);
-    expect(changed[0]).toMatchObject({ before: null, after: 0 });
-    expect(changed[0]!.contributionDelta).toBe(0);
+    expect(changed[0]!.before).toBeNull();
+    // one weak 1★ review pulled towards the neutral prior: below the middle, above 0
+    expect(changed[0]!.after).toBeGreaterThan(0);
+    expect(changed[0]!.after).toBeLessThan(50);
   });
 });

@@ -14,7 +14,9 @@ export type Archetype =
   | 'linked'
   | 'inactive'
   | 'blocked'
-  | 'no_free_contacts';
+  | 'no_free_contacts'
+  | 'ring'
+  | 'client';
 
 export interface CompanySpec {
   id: string;
@@ -91,7 +93,7 @@ export const COMPANY_SPECS: CompanySpec[] = [
   },
   {
     id: 'c08', legalName: 'Lowland Cargo B.V.', country: 'NL', regNumberType: 'KVK', regNumber: '81234567',
-    role: 'shipper', archetype: 'newcomer', note: 'Newcomer shipper, no reviews',
+    role: 'shipper', archetype: 'newcomer', note: 'Newcomer shipper, no reviews; NL registry does not report status',
     joinedMonthsAgo: 0.5, foundedYearsAgo: 4, reportsFiled: true, balanceEur: 30, freeUsedThisMonth: 0,
     lastLoginDaysAgo: 0, deviceId: 'dev-08', homeCities: ['rotterdam', 'amsterdam'],
     persons: [{ name: 'Daan de Vries', phone: '+31 6 1234 5608' }],
@@ -105,7 +107,7 @@ export const COMPANY_SPECS: CompanySpec[] = [
   },
   {
     id: 'c10', legalName: 'Elbe Handels GmbH', country: 'DE', regNumberType: 'VAT', regNumber: 'DE301234562',
-    role: 'shipper', archetype: 'mixed', note: 'Shipper: mixed reviews, 1 open claim',
+    role: 'shipper', archetype: 'mixed', note: 'Shipper: mixed reviews, 1 confirmed claim',
     joinedMonthsAgo: 16, foundedYearsAgo: 3, reportsFiled: false, balanceEur: 60, freeUsedThisMonth: 0,
     lastLoginDaysAgo: 5, deviceId: 'dev-10', homeCities: ['dresden', 'leipzig'],
     persons: [{ name: 'Lena Schmidt', phone: '+49 351 555 0110' }],
@@ -119,21 +121,21 @@ export const COMPANY_SPECS: CompanySpec[] = [
   },
   {
     id: 'c12', legalName: 'Euro Cargo Partners s.r.o.', country: 'SK', regNumberType: 'VAT', regNumber: 'SK2021234562',
-    role: 'forwarder', archetype: 'mismatch', note: 'Red flag: profile does not match registry',
+    role: 'forwarder', archetype: 'mismatch', note: 'Profile does not match registry: yellow "Clarify your data", red in 9 days',
     joinedMonthsAgo: 5, foundedYearsAgo: 2, reportsFiled: true, balanceEur: 15, freeUsedThisMonth: 0,
     lastLoginDaysAgo: 2, deviceId: 'dev-12', homeCities: ['bratislava', 'vienna'],
     persons: [{ name: 'Martin Horváth', phone: '+421 903 123 412' }],
   },
   {
     id: 'c13', legalName: 'QuickRate Trans sp. z o.o.', country: 'PL', regNumberType: 'NIP', regNumber: '8971234563',
-    role: 'carrier', archetype: 'linked', note: 'Yellow flag: linked with c14, mutual 5★ reviews',
+    role: 'carrier', archetype: 'linked', note: 'Shares a device with c14: no flag, their mutual reviews weigh less',
     joinedMonthsAgo: 4, foundedYearsAgo: 1.2, reportsFiled: true, balanceEur: 20, freeUsedThisMonth: 0,
     lastLoginDaysAgo: 1, deviceId: 'dev-shared-13', homeCities: ['wroclaw'],
     persons: [{ name: 'Adam Lewandowski', phone: '+48 604 500 613' }],
   },
   {
     id: 'c14', legalName: 'QuickRate Logistics sp. z o.o.', country: 'PL', regNumberType: 'NIP', regNumber: '8971234574',
-    role: 'shipper', archetype: 'linked', note: 'Yellow flag: linked with c13, mutual 5★ reviews',
+    role: 'shipper', archetype: 'linked', note: 'Shares a device with c13: no flag, their mutual reviews weigh less',
     joinedMonthsAgo: 4, foundedYearsAgo: 1.1, reportsFiled: true, balanceEur: 20, freeUsedThisMonth: 0,
     lastLoginDaysAgo: 1, deviceId: 'dev-shared-13', homeCities: ['wroclaw'],
     persons: [{ name: 'Ewa Lewandowska', phone: '+48 604 500 614' }],
@@ -154,7 +156,7 @@ export const COMPANY_SPECS: CompanySpec[] = [
   },
   {
     id: 'c17', legalName: 'Riga Container SIA', country: 'LV', regNumberType: 'VAT', regNumber: 'LV40001234567',
-    role: 'carrier', archetype: 'inactive', note: 'Last login ~5.5 months ago (deactivates after +1 month)',
+    role: 'carrier', archetype: 'inactive', note: 'Last login ~5.5 months ago: warning after +1 week, hidden after +1 month',
     joinedMonthsAgo: 24, foundedYearsAgo: 10, reportsFiled: true, balanceEur: 35, freeUsedThisMonth: 0,
     lastLoginDaysAgo: 165, deviceId: 'dev-17', homeCities: ['riga'],
     persons: [{ name: 'Jānis Bērziņš', phone: '+371 2612 3417' }],

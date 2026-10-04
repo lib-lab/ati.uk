@@ -50,10 +50,13 @@ describe('openContact', () => {
     const sameOwnerOther = res.state.listings.find((l) => l.ownerId === listing.ownerId && l.id !== listing.id && l.status === 'active');
     if (sameOwnerOther) {
       const again = openContact(res.state, sameOwnerOther.id);
-      expect(again.ok && again.state).toBe(res.state); // nothing changed, nothing charged
+      if (!again.ok) throw new Error(again.error);
+      // free: nothing charged; the reveal on this listing is logged (for change notifications)
+      expect(balanceOf(again.state.transactions, 'c02')).toBe(before - 500);
+      expect(again.state.contactOpenings.at(-1)).toMatchObject({ viewerId: 'c02', listingId: sameOwnerOther.id, createdAccess: false });
     }
     const repeat = openContact(res.state, listing.id);
-    expect(repeat.ok && repeat.state).toBe(res.state);
+    expect(repeat.ok && repeat.state).toBe(res.state); // same listing again: nothing changes
   });
 
   it('refuses when free contacts are used up and the balance is empty', () => {

@@ -1,0 +1,94 @@
+/*
+ * Design tokens. The only place with raw values for styles: sizes, colours, weights.
+ * Components and styles.css use var(--…) only (see CLAUDE.md "Design").
+ * The spacing scale mirrors the values used today; "Visual polish" (ROADMAP) will reduce it.
+ *
+ * Breakpoints cannot be CSS variables inside @media, so they are fixed here and are the
+ * only numbers allowed in media queries: mobile 640px, card layout 760px.
+ */
+:root {
+  /* colours */
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f8;
+  --text: #18181b;
+  --muted: #6b7280;
+  --border: #e4e4e7;
+  --accent: #2563eb;
+  --accent-bg: #eff4ff;
+  --accent-border: #c7d7fe;
+  --on-accent: #fff;
+  --red: #b91c1c;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
+  --yellow: #92400e;
+  --yellow-bg: #fffbeb;
+  --yellow-border: #fde68a;
+  --neutral-bg: #f4f4f5;
+
+  /* typography */
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-size-xs: 11px; /* toolbar label, counters */
+  --font-size-sm: 12px; /* hints, badges, table heads, field labels */
+  --font-size-md: 13px; /* toolbar, small buttons, alerts, chips */
+  --font-size-base: 14px;
+  --font-size-h2: 16px;
+  --font-size-lg: 18px; /* score button */
+  --font-size-xl: 20px; /* h1, big numbers, star input */
+  --font-size-xxl: 28px; /* score in the profile */
+  --line-height: 1.45;
+  --line-height-tight: 1;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  --letter-spacing-caps: 0.05em;
+  --letter-spacing-stars: 1px;
+
+  /* spacing */
+  --space-1: 1px;
+  --space-2: 2px;
+  --space-3: 3px;
+  --space-4: 4px;
+  --space-5: 5px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-40: 40px;
+
+  /* borders and radii */
+  --border-width: 1px;
+  --border-width-thick: 2px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* controls: height comes from font size, line height and these paddings */
+  --control-padding-y: var(--space-4);
+  --control-padding-x: var(--space-8);
+  --button-padding-x: var(--space-10);
+  --button-small-padding-y: var(--space-2);
+  --textarea-rows: 2;
+  --textarea-rows-tall: 12;
+
+  /* widths */
+  --page-max-width: 1200px;
+  --form-max-width: 900px;
+  --narrow-form-max-width: 640px;
+  --card-side-width: 340px;
+  --field-min-width: 200px;
+  --input-narrow-width: 72px;
+  --input-date-width: 140px;
+  --score-min-width: 32px;
+  --counter-min-width: 18px;
+  --component-weight-width: 48px;
+  --component-weight-width-mobile: 40px;
+  --component-bar-width: 160px;
+  --component-value-width: 120px;
+
+  /* states */
+  --opacity-hover: 0.9;
+  --opacity-disabled: 0.5;
+}

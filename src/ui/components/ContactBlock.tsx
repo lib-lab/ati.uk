@@ -2,6 +2,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { openContact } from '../../domain/commands/contacts';
+import { claimEditRefund } from '../../domain/commands/listings';
+import { openingGate } from '../../domain/rules/collection';
+import { revealContact, type PublicListing } from '../../domain/rules/contactPrivacy';
+import { editRefund } from '../../domain/rules/listingEdits';
 import { CONFIG } from '../../domain/config';
 import { decideContact, findAccess } from '../../domain/rules/contactAccess';
 import { balanceOf } from '../../domain/rules/ledger';
@@ -9,31 +13,52 @@ import type { AppState, Listing, Rating } from '../../domain/types';
 import { store } from '../../store/store';
 import { formatDate, formatMoney } from '../format';
 import { t } from '../i18n';
-import { getCompany } from '../selectors';
+import { flagLabel } from './FlagBadge';
 
-export function ContactBlock({ state, listing, ownerRating }: { state: AppState; listing: Listing; ownerRating: Rating }) {
+export function ContactBlock({ state, listing, ownerRating }: { state: AppState; listing: PublicListing; ownerRating: Rating }) {
   const [confirming, setConfirming] = useState(false);
+  const [human, setHuman] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const viewerId = state.actorId;
-  const decision = decideContact(state, viewerId, listing, state.now);
+  // decideContact only needs public fields; the contact person stays hidden.
+  const decision = decideContact(state, viewerId, listing as Listing, state.now);
   const redFlag = ownerRating.redFlags[0];
   const yellowFlag = ownerRating.yellowFlags[0];
 
   const doOpen = () => {
-    const res = store.run((s) => openContact(s, listing.id));
+    const res = store.run((s) => openContact(s, listing.id, { viaCard: true, humanConfirmed: human }));
     setError(res.ok ? null : t(`error.${res.error}`));
     setConfirming(false);
   };
 
   if (decision.kind === 'own_listing' || decision.kind === 'already_open') {
     const access = findAccess(state, viewerId, listing.ownerId);
+    // An already opened contact is shown on this listing only after "Show" (it is logged for change notifications).
+    const revealedHere =
+      decision.kind === 'own_listing' || state.contactOpenings.some((o) => o.viewerId === viewerId && o.listingId === listing.id);
+    const refund = decision.kind === 'already_open' ? editRefund(state, viewerId, listing.id) : null;
     return (
       <div className="contact">
-        <ContactDetails state={state} listing={listing} />
+        {revealedHere ? (
+          <ContactDetails state={state} listingId={listing.id} />
+        ) : (
+          <button className="btn btn-primary" onClick={doOpen}>{t('contact.showOpened')}</button>
+        )}
         <p className="muted small">
           {decision.kind === 'own_listing' || !access ? t('contact.own') : t('contact.repeatNote', { date: formatDate(access.openedAt) })}
           {decision.kind === 'own_listing' && <> <Link to="/my-listings">{t('contact.manage')}</Link></>}
+          {decision.kind === 'already_open' && <> <Link to={`/company/${listing.ownerId}`}>{t('contact.reviewLink')}</Link></>}
         </p>
+        {refund && (
+          <div className="alert alert-yellow">
+            {t('contact.editRefund', { hours: CONFIG.editRefundHours })}{' '}
+            <button className="btn btn-small" onClick={() => {
+              const res = store.run((st) => claimEditRefund(st, listing.id));
+              setError(res.ok ? null : t(`error.${res.error}`));
+            }}>{t('contact.editRefundButton')}</button>
+          </div>
+        )}
+        {error && <p className="alert alert-red">{error}</p>}
       </div>
     );
   }
@@ -71,11 +96,15 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
       note = t('contact.noFunds', { price: formatMoney(decision.price), balance: formatMoney(balance) });
       break;
   }
-  const blocked = decision.kind === 'insufficient_funds';
+  // Limits that hold even after the human check are shown first; the check is offered only when it helps.
+  const gate = openingGate(state, viewerId, state.now, true);
+  const gateBlocks = gate.kind !== 'ok';
+  const needsHuman = !gateBlocks && openingGate(state, viewerId, state.now, false).kind === 'human_check';
+  const blocked = decision.kind === 'insufficient_funds' || gateBlocks || (needsHuman && !human);
 
   return (
     <div className="contact">
-      {redFlag && <p className="alert alert-red">{t('contact.redWarning', { flag: t(`flag.${redFlag.kind}`) })}</p>}
+      {redFlag && <p className="alert alert-red">{t('contact.redWarning', { flag: flagLabel(redFlag) })}</p>}
       {!redFlag && yellowFlag && <p className="alert alert-yellow">{t('contact.yellowNote')}</p>}
       {confirming ? (
         <div className="inline">
@@ -98,9 +127,18 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
           {label}
         </button>
       )}
-      <p className={blocked ? 'alert alert-neutral' : 'muted small'}>
+      {needsHuman && (
+        <label className="checkbox human-check">
+          <input id="human-check" type="checkbox" checked={human} onChange={(e) => setHuman(e.target.checked)} />
+          <span>{t('contact.humanCheck')}</span>
+        </label>
+      )}
+      {gate.kind === 'blocked' && <p className="alert alert-red">{t('contact.gate.blocked')}</p>}
+      {gate.kind === 'daily_limit' && <p className="alert alert-neutral">{t('contact.gate.dailyLimit', { limit: gate.limit })} <Link to="/account">{t('contact.gate.raise')}</Link></p>}
+      {gate.kind === 'slow_down' && <p className="alert alert-neutral">{t('contact.gate.slowDown', { perHour: gate.perHour })}</p>}
+      <p className={decision.kind === 'insufficient_funds' ? 'alert alert-neutral' : 'muted small'}>
         {note}
-        {blocked && (
+        {decision.kind === 'insufficient_funds' && (
           <>
             <br />
             {t('contact.noFundsHint')} <Link to="/balance">{t('contact.topUpLink')}</Link>
@@ -112,16 +150,16 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
   );
 }
 
-function ContactDetails({ state, listing }: { state: AppState; listing: Listing }) {
-  const owner = getCompany(state, listing.ownerId);
-  const person = owner?.contactPersons.find((p) => p.id === listing.contactPersonId) ?? owner?.contactPersons[0];
-  if (!person) return null;
+/** The contact comes only from the domain access rule (revealContact), never from listing data. */
+function ContactDetails({ state, listingId }: { state: AppState; listingId: string }) {
+  const res = revealContact(state, state.actorId, listingId);
+  if (!res.ok) return <p className="alert alert-neutral">{t(`contact.reveal.${res.reason}`)}</p>;
   return (
     <dl className="facts">
       <dt>{t('contact.person')}</dt>
-      <dd>{person.name}</dd>
+      <dd>{res.person.name}</dd>
       <dt>{t('contact.phone')}</dt>
-      <dd className="selectable">{person.phone}</dd>
+      <dd className="selectable">{res.person.phone}</dd>
     </dl>
   );
 }

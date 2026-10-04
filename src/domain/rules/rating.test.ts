@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeedState } from '../../seed';
 import { addDays } from '../time';
-import { company, cargo, emptyState, NOW, review } from '../testing/fixtures';
+import { cargo, company, emptyState, NOW, review } from '../testing/fixtures';
 import type { Claim, Flag } from '../types';
 import {
   activityComponent,
@@ -19,11 +19,28 @@ const claim = (targetId: string, status: Claim['status']): Claim => ({
   id: `cl-${targetId}-${status}-${Math.random()}`, claimantId: 'x', targetId, text: '', status, createdAt: NOW,
 });
 
+/**
+ * Authors with full weight: 20+ months on the platform, 20 listings, paid contact of the target,
+ * and contacts with outside companies (so they are not a closed group).
+ */
+function trusted(authors: string[], target = 't') {
+  const outside = ['o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7'];
+  return emptyState({
+    companies: [...authors, target, ...outside].map((id) => company(id)),
+    listings: authors.flatMap((a) => Array.from({ length: 20 }, (_, i) => cargo(`${a}-l${i}`, a))),
+    contactAccesses: authors.flatMap((a) => [
+      { id: `${a}-t`, viewerId: a, ownerId: target, firstListingId: '', openedAt: NOW, paidWith: 'balance' as const },
+      ...outside.map((o) => ({ id: `${a}-${o}`, viewerId: a, ownerId: o, firstListingId: '', openedAt: NOW, paidWith: 'balance' as const })),
+    ]),
+  });
+}
+
 describe('reviews component', () => {
-  it('maps the average 1..5 to 0..100', () => {
-    const s = emptyState({ companies: [company('a'), company('t')], reviews: [review('a', 't', 5), review('a', 't', 3)] });
-    // author "a" has no reviews → its score is below 70 → weight 1
-    expect(reviewsComponent(s, 't', NOW)).toBe(75);
+  it('maps the weighted average (with the neutral 3★ prior) to 0..100', () => {
+    const s = trusted(['a', 'b']);
+    s.reviews = [review('a', 't', 5), review('b', 't', 3)];
+    // (5 + 3 + 3×1) / 3 = 3.667 → 66.67
+    expect(reviewsComponent(s, 't', NOW)).toBeCloseTo(66.67, 1);
   });
 
   it('is unavailable without counted reviews', () => {
@@ -31,73 +48,86 @@ describe('reviews component', () => {
   });
 
   it('gives reviews older than 12 months half the weight', () => {
-    const s = emptyState({
-      companies: [company('a'), company('t')],
-      reviews: [review('a', 't', 5, 10), review('a', 't', 1, 400)],
-    });
-    // (5*1 + 1*0.5) / 1.5 = 3.667 → (3.667-1)/4*100 = 66.67
-    expect(reviewsComponent(s, 't', NOW)).toBeCloseTo(66.67, 1);
-  });
-
-  it('gives authors with a high score more weight', () => {
-    const fans = ['f1', 'f2', 'f3'];
-    const s = emptyState({
-      companies: [company('hi'), company('lo', { verification: { ...company('lo').verification, record: null, matchesProfile: false } }), company('t'), ...fans.map((f) => company(f))],
-      // "hi" has strong reviews itself → score ≥ 70
-      reviews: [...fans.map((f) => review(f, 'hi', 5)), review('hi', 't', 5), review('lo', 't', 1)],
-    });
-    expect(computeRating(s, 'hi', NOW, { withAuthorWeight: false }).score).toBeGreaterThanOrEqual(70);
-    expect(computeRating(s, 'lo', NOW, { withAuthorWeight: false }).score).toBeLessThan(70);
-    // (5*1.5 + 1*1) / 2.5 = 3.4 → 60
+    const s = trusted(['a', 'b']);
+    s.reviews = [review('a', 't', 5, 10), review('b', 't', 1, 400)];
+    // (5×1 + 1×0.5 + 3×1) / 2.5 = 3.4 → 60
     expect(reviewsComponent(s, 't', NOW)).toBeCloseTo(60, 5);
   });
 
-  it('ignores reviews from authors with a yellow flag and voided reviews', () => {
+  it('gives reviews from authors with a yellow flag and voided reviews weight 0', () => {
     const s = emptyState({
       companies: [company('a'), company('b'), company('t')],
       reviews: [review('a', 't', 1), { ...review('b', 't', 1), voided: true }],
       flags: [flag('a', 'suspected_linked', 'yellow')],
     });
-    expect(reviewsComponent(s, 't', NOW)).toBeNull();
+    // weight 0: the component stays available at the neutral prior (50), never "no data"
+    expect(reviewsComponent(s, 't', NOW)).toBe(50);
     expect(computeRating(s, 't', NOW).countedReviews).toBe(0);
   });
 });
 
 describe('verification component', () => {
-  it('is 100 for an old, active, reporting, matching company', () => {
-    expect(verificationComponent(company('a'), NOW)).toBe(100);
+  const withRecord = (patch: Partial<NonNullable<ReturnType<typeof company>['verification']['record']>>, matches = true) => {
+    const c = company('a');
+    return { ...c, verification: { ...c.verification, matchesProfile: matches, record: { ...c.verification.record!, ...patch } } };
+  };
+
+  it('is 100 for an active company whose profile matches the registry', () => {
+    expect(verificationComponent(company('a'))).toBe(100);
   });
 
-  it('scales age linearly between 1 and 5 years', () => {
-    const c = company('a');
-    const young = { ...c, verification: { ...c.verification, record: { ...c.verification.record!, foundedAt: addDays(NOW, -365 * 3) } } };
-    // 40 + 25*0.5 + 15 + 20
-    expect(verificationComponent(young, NOW)).toBeCloseTo(87.5, 5);
+  it('age and reports do not affect the score', () => {
+    expect(verificationComponent(withRecord({ foundedAt: addDays(NOW, -100), reportsFiled: false }))).toBe(100);
   });
 
-  it('drops status and match for a liquidated, mismatching company', () => {
-    const c = company('a');
-    const bad = {
-      ...c,
-      verification: { ...c.verification, matchesProfile: false, record: { ...c.verification.record!, status: 'liquidated' as const } },
-    };
-    expect(verificationComponent(bad, NOW)).toBe(40);
+  it('liquidated or mismatching loses the corresponding half', () => {
+    expect(verificationComponent(withRecord({ status: 'liquidated' }))).toBe(50);
+    expect(verificationComponent(withRecord({}, false))).toBe(50);
+  });
+
+  it('a check the registry does not provide does not lower the score', () => {
+    expect(verificationComponent(withRecord({ status: undefined }))).toBe(100);
+    expect(verificationComponent(withRecord({ status: undefined }, false))).toBe(0);
   });
 
   it('is 0 when the registry did not find the company', () => {
     const c = company('a');
-    expect(verificationComponent({ ...c, verification: { ...c.verification, record: null, matchesProfile: false } }, NOW)).toBe(0);
+    expect(verificationComponent({ ...c, verification: { ...c.verification, record: null, matchesProfile: false } })).toBe(0);
   });
 });
 
 describe('claims component', () => {
-  it('only open claims lower the value', () => {
-    const s = emptyState({ claims: [claim('t', 'open'), claim('t', 'settled'), claim('t', 'rejected'), claim('other', 'open')] });
-    expect(claimsComponent(s, 't')).toBe(75);
+  /** Claimant "x" with full weight: paid contact of the target, tenure, activity, outside contacts. */
+  const base = (claims: Claim[]) => {
+    const s = trusted(['x']);
+    return { ...s, claims };
+  };
+
+  it('a confirmed or a recent open claim of full weight costs 25; settled and rejected do not count', () => {
+    expect(claimsComponent(base([claim('t', 'open')]), 't', NOW)).toBeCloseTo(75, 6);
+    expect(claimsComponent(base([claim('t', 'confirmed')]), 't', NOW)).toBeCloseTo(75, 6);
+    expect(claimsComponent(base([claim('t', 'settled'), claim('t', 'rejected')]), 't', NOW)).toBe(100);
   });
+
+  it('an unconfirmed claim stops counting after 30 days; a confirmed one keeps counting', () => {
+    const old = (status: Claim['status']) => ({ ...claim('t', status), createdAt: addDays(NOW, -31) });
+    expect(claimsComponent(base([old('open')]), 't', NOW)).toBe(100);
+    expect(claimsComponent(base([old('confirmed')]), 't', NOW)).toBeCloseTo(75, 6);
+  });
+
+  it('a claim weighs like a review: a newcomer with a free contact costs less', () => {
+    const s = emptyState({
+      companies: [company('x', { joinedAt: NOW }), company('t')],
+      contactAccesses: [{ id: 'a', viewerId: 'x', ownerId: 't', firstListingId: '', openedAt: NOW, paidWith: 'open_listing' }],
+      claims: [claim('t', 'open')],
+    });
+    const value = claimsComponent(s, 't', NOW);
+    expect(value).toBeGreaterThan(75);
+    expect(value).toBeLessThan(100);
+  });
+
   it('never goes below 0', () => {
-    const s = emptyState({ claims: Array.from({ length: 6 }, () => claim('t', 'open')) });
-    expect(claimsComponent(s, 't')).toBe(0);
+    expect(claimsComponent(base(Array.from({ length: 6 }, () => claim('t', 'confirmed'))), 't', NOW)).toBe(0);
   });
 });
 
@@ -106,22 +136,17 @@ describe('activity component', () => {
     expect(activityComponent(emptyState(), company('n', { joinedAt: addDays(NOW, -10) }), NOW)).toBeNull();
   });
 
-  it('uses tenure, regularity and found-on-platform share', () => {
+  it('tenure plus contacts that later received reviews; listings do not count', () => {
     const c = company('a', { joinedAt: addDays(NOW, -365 * 3) }); // tenure capped at 1
-    const removed = (id: string, reason: 'found_on_platform' | 'not_relevant') =>
-      cargo(id, 'a', { status: 'removed', removalReason: reason, createdAt: addDays(NOW, -200) });
-    const listings = [
-      ...Array.from({ length: 5 }, (_, i) => cargo(`r${i}`, 'a', { createdAt: addDays(NOW, -i - 1) })), // 5 recent → 0.5
-      removed('x1', 'found_on_platform'), removed('x2', 'found_on_platform'), removed('x3', 'not_relevant'), removed('x4', 'not_relevant'),
-    ];
-    // 1*0.5 + 0.5*0.3 + 0.5*0.2 = 0.75
-    expect(activityComponent(emptyState({ listings }), c, NOW)).toBeCloseTo(75, 5);
-  });
-
-  it('renormalises without enough removals', () => {
-    const c = company('a', { joinedAt: addDays(NOW, -365 * 3) });
-    // tenure 1, regularity 0 → 0.5 / 0.8
-    expect(activityComponent(emptyState(), c, NOW)).toBeCloseTo(62.5, 5);
+    const s = emptyState({
+      companies: [c, ...['p1', 'p2', 'p3', 'p4', 'p5'].map((id) => company(id))],
+      listings: Array.from({ length: 30 }, (_, i) => cargo(`l${i}`, 'a')),
+      contactAccesses: ['p1', 'p2', 'p3', 'p4', 'p5'].map((p) => ({ id: `a-${p}`, viewerId: p, ownerId: 'a', firstListingId: '', openedAt: addDays(NOW, -20), paidWith: 'balance' as const })),
+      reviews: [review('p1', 'a', 5), review('p2', 'a', 2), { ...review('p3', 'a', 4), createdAt: addDays(NOW, -40) }],
+    });
+    // reviewed contacts: p1, p2 (p3 reviewed before the contact) → 2 of 10 → 0.5×1 + 0.5×0.2 = 0.6
+    expect(activityComponent(s, c, NOW)).toBeCloseTo(60, 5);
+    expect(activityComponent({ ...s, listings: [] }, c, NOW)).toBeCloseTo(60, 5);
   });
 });
 
@@ -179,7 +204,9 @@ describe('seed archetypes rate as expected', () => {
     expect(r.components.find((c) => c.key === 'reviews')!.value).toBeNull();
   });
 
-  it('linked accounts do not count each other’s reviews', () => {
-    expect(computeRating(s, 'c13', s.now).countedReviews).toBe(0);
+  it('companies sharing a device keep their reviews (no flag), with reduced weight', () => {
+    const r = computeRating(s, 'c13', s.now);
+    expect(r.countedReviews).toBe(1);
+    expect(r.yellowFlags).toHaveLength(0);
   });
 });

@@ -1,9 +1,10 @@
 // Blocking flags (TZ: "Rating model" → blocking flags).
 import type { Flag, FlagKind, FlagLevel, Id, Verification } from '../types';
 
+/** Initial level. A data mismatch starts yellow ("Clarify your data") and turns red after the grace period. */
 export const FLAG_LEVEL: Record<FlagKind, FlagLevel> = {
   liquidated: 'red',
-  data_mismatch: 'red',
+  data_mismatch: 'yellow',
   fraud_blocked: 'red',
   suspected_linked: 'yellow',
 };
@@ -12,7 +13,7 @@ export const FLAG_LEVEL: Record<FlagKind, FlagLevel> = {
 export function flagKindsFromVerification(v: Verification): FlagKind[] {
   const kinds: FlagKind[] = [];
   if (!v.record) return ['data_mismatch'];
-  if (v.record.status !== 'active') kinds.push('liquidated');
+  if (v.record.status !== undefined && v.record.status !== 'active') kinds.push('liquidated');
   if (!v.matchesProfile) kinds.push('data_mismatch');
   return kinds;
 }

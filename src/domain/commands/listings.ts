@@ -7,6 +7,8 @@ import { withRatingEvents } from '../ratingEvents';
 import { balanceOf } from '../rules/ledger';
 import { isExpired, needsExpiryReminder } from '../rules/lifetime';
 import { canPost, extendedExpiry, listingFromDraft, validateDraft, type ListingDraft } from '../rules/listingDraft';
+import { editRefund, isKeyChange, listingDiff } from '../rules/listingEdits';
+import { refundContact } from './moderation';
 import { hasPriority } from '../rules/search';
 import { isBefore, startOfDay } from '../time';
 import type { AppState, Cents, Id, IsoDate, Listing, RemovalReason, RouteTemplate, TransactionType } from '../types';
@@ -112,7 +114,7 @@ export function removeListing(state: AppState, listingId: Id, reason: RemovalRea
     reasonKey: `event.listing.removed.${reason}`,
     params: { listing: l.id, route: routeLabel(l) },
   });
-  s = withRatingEvents(state, s, { reasonKey: `event.rating.removed.${reason}`, params: { listing: l.id }, actor: l.ownerId });
+  // The removal reason is a metric only and does not enter the rating (TZ).
   return { ok: true, state: s };
 }
 
@@ -152,6 +154,78 @@ export function buyPriority(state: AppState, listingId: Id): CommandResult {
     params: { amount: CONFIG.prices.priority, listing: l.id, route: routeLabel(l), until: l.expiresAt },
   });
   return { ok: true, state: s };
+}
+
+// ---------- Editing after contacts were opened ----------
+
+/** Current listing as a draft, for the edit form and for diffs. */
+export function draftOf(l: Listing): ListingDraft {
+  return {
+    kind: l.kind, contactPersonId: l.contactPersonId, from: l.from, to: l.to, dateFrom: l.dateFrom,
+    dateTo: l.kind === 'cargo' ? l.dateTo : undefined, bodyTypes: l.bodyTypes, weightT: l.weightT, volumeM3: l.volumeM3,
+    loadingMethods: l.loadingMethods, rate: l.rate, comment: l.comment,
+    ...(l.kind === 'cargo' ? { cargoName: l.cargoName, packaging: l.packaging, pieces: l.pieces } : {}),
+  };
+}
+
+/**
+ * Edits are allowed (honest owners move dates and adjust weight), but every change goes to the
+ * visible history and everyone who revealed the contact on this listing is notified (TZ).
+ */
+export function editListing(state: AppState, listingId: Id, draft: ListingDraft): CommandResult {
+  const l = ownListing(state, listingId);
+  if (l === 'not_found') return { ok: false, error: 'listing_not_found' };
+  if (l === 'not_allowed') return { ok: false, error: 'not_allowed' };
+  if (l.status !== 'active') return { ok: false, error: 'listing_not_active' };
+  const owner = actorCompany(state)!;
+  if (draft.kind !== l.kind || Object.keys(validateDraft(draft, owner, state.now)).length > 0) return { ok: false, error: 'invalid_listing' };
+  const fields = listingDiff(l, draft);
+  if (fields.length === 0) return { ok: true, state };
+
+  const rebuilt = listingFromDraft(draft, l.id, l.ownerId, l.createdAt);
+  const datesChanged = fields.some((f) => f.field === 'dates');
+  const updated = {
+    ...rebuilt,
+    status: l.status,
+    isOpen: l.isOpen,
+    priorityUntil: l.priorityUntil,
+    reminderSentAt: datesChanged ? undefined : l.reminderSentAt,
+    expiresAt: datesChanged ? rebuilt.expiresAt : l.expiresAt,
+  } as Listing;
+
+  let [s, changeId] = nextId(state, 'lc');
+  const key = isKeyChange(fields);
+  s = { ...replaceListing(s, updated), listingChanges: [...s.listingChanges, { id: changeId, listingId: l.id, at: s.now, fields, key }] };
+  s = logEvent(s, {
+    type: 'listing_edited',
+    actor: l.ownerId,
+    subjectIds: [l.ownerId, l.id, changeId],
+    reasonKey: key ? 'event.listing.editedKey' : 'event.listing.edited',
+    params: { listing: l.id, route: routeLabel(updated), fields: fields.map((f) => f.field).join(', ') },
+  });
+  const viewers = [...new Set(s.contactOpenings.filter((o) => o.listingId === l.id && o.viewerId && o.viewerId !== l.ownerId).map((o) => o.viewerId!))];
+  for (const v of viewers) {
+    s = addNotification(s, v, 'listing_changed', {
+      variant: key ? 'key' : 'minor',
+      listing: l.id,
+      route: routeLabel(updated),
+      fields: fields.map((f) => f.field).join(', '),
+    });
+  }
+  return { ok: true, state: s };
+}
+
+/** One button: a refund when a key field changed within 24 hours after the viewer's paid opening (TZ). */
+export function claimEditRefund(state: AppState, listingId: Id): CommandResult {
+  const listing = state.listings.find((l) => l.id === listingId);
+  if (!listing) return { ok: false, error: 'listing_not_found' };
+  const eligible = editRefund(state, state.actorId, listingId);
+  if (!eligible) return { ok: false, error: 'refund_not_available' };
+  const after = refundContact(state, state.actorId, listing.ownerId, eligible.change.id, 'edit');
+  if (after === state || !after.contactAccesses.some((a) => a.viewerId === state.actorId && a.ownerId === listing.ownerId && a.refundedAt)) {
+    return { ok: false, error: 'refund_not_available', state: after === state ? undefined : after };
+  }
+  return { ok: true, state: after };
 }
 
 // ---------- Route templates ----------
