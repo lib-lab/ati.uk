@@ -85,19 +85,23 @@ export function refundContact(state: AppState, reporterId: Id, targetId: Id, ref
       s = { ...s, complaints: s.complaints.map((c) => (c.reporterId === reporterId && c.targetId === targetId && c.status === 'confirmed' && !c.refundTransactionId ? { ...c, refundTransactionId: txId } : c)) };
     }
   }
+  if (refund.kind === 'package') {
+    s = { ...s, packages: s.packages.map((p) => (p.id === refund.packageId ? { ...p, used: Math.max(0, p.used - 1) } : p)) };
+  }
   const suffix = cause === 'edit' ? 'Edit' : '';
+  const kind = refund.kind === 'free_quota' ? 'quota' : refund.kind; // money | quota | package
   s = logEvent(s, {
     type: 'refund',
     actor: cause === 'complaint' ? MODERATOR_ID : reporterId,
     subjectIds: [reporterId, targetId, refId],
-    reasonKey: refund.kind === 'money' ? `event.refund.money${suffix}` : `event.refund.quota${suffix}`,
+    reasonKey: `event.refund.${kind}${suffix}`,
     params: refund.kind === 'money' ? { amount: refund.amount, target: targetId } : { target: targetId },
   });
   return addNotification(
     s,
     reporterId,
     'refund',
-    refund.kind === 'money' ? { variant: `money${suffix}`, amount: refund.amount, target: targetId } : { variant: `quota${suffix}`, target: targetId },
+    refund.kind === 'money' ? { variant: `money${suffix}`, amount: refund.amount, target: targetId } : { variant: `${kind}${suffix}`, target: targetId },
   );
 }
 

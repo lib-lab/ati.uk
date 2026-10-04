@@ -46,8 +46,8 @@ export function editRefund(
   listingId: Id,
 ): { change: ListingChange } | null {
   const access = state.contactAccesses.find((a) => a.viewerId === viewerId && a.firstListingId === listingId);
-  // Open listings are free; returning a contact to a package comes with packages (E11).
-  if (!access || access.refundedAt || access.paidWith === 'open_listing' || access.paidWith === 'package') return null;
+  // Open listings are free: nothing to return.
+  if (!access || access.refundedAt || access.paidWith === 'open_listing') return null;
   const until = addHours(access.openedAt, CONFIG.editRefundHours);
   // The simulated clock does not move between clicks, so a change at the very moment of the opening counts.
   const change = state.listingChanges.find(

@@ -114,10 +114,11 @@ export function independentReporters(state: Pick<AppState, 'complaints' | 'compa
 export type Refund =
   | { kind: 'money'; amount: Cents }
   | { kind: 'free_quota' }
-  | { kind: 'none'; reason: 'already_refunded' | 'quota_month_passed' | 'nothing_paid' | 'no_access' | 'limit_reached' };
+  | { kind: 'package'; packageId: Id }
+  | { kind: 'none'; reason: 'already_refunded' | 'quota_month_passed' | 'package_expired' | 'nothing_paid' | 'no_access' | 'limit_reached' };
 
 export function refundFor(
-  state: Pick<AppState, 'contactAccesses' | 'transactions'>,
+  state: Pick<AppState, 'contactAccesses' | 'transactions' | 'packages'>,
   access: ContactAccess | undefined,
   now: IsoDate,
 ): Refund {
@@ -131,7 +132,11 @@ export function refundFor(
     }
     case 'free_quota':
       return monthKey(access.openedAt) === monthKey(now) ? { kind: 'free_quota' } : { kind: 'none', reason: 'quota_month_passed' };
-    case 'package': // returned to the package in E11
+    case 'package': {
+      // Back into the same package while it is valid; an expired package cannot take it back.
+      const pkg = state.packages.find((p) => p.id === access.packageId);
+      return pkg && isBefore(now, pkg.validTo) ? { kind: 'package', packageId: pkg.id } : { kind: 'none', reason: 'package_expired' };
+    }
     case 'open_listing':
       return { kind: 'none', reason: 'nothing_paid' };
   }

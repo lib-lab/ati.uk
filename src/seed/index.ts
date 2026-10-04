@@ -29,7 +29,7 @@ import { buildClients, CLIENT_SPECS } from './clients';
 import { buildRing, RING_SPECS } from './ring';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 7;
+export const STATE_VERSION = 8;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 
