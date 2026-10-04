@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { loginAs } from '../../domain/commands/session';
+import { CONFIG } from '../../domain/config';
+import { freeContactsLeft } from '../../domain/rules/contactAccess';
 import { balanceOf } from '../../domain/rules/ledger';
 import { MODERATOR_ID } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
@@ -20,6 +22,7 @@ export function TopBar() {
         {t('app.title')} <span className="muted small">{t('app.prototypeBadge')}</span>
       </Link>
       <nav className="nav">
+        <NavLink to="/search">{t('nav.search')}</NavLink>
         <NavLink to="/companies">{t('nav.companies')}</NavLink>
       </nav>
       <div className="topbar-tools">
@@ -37,6 +40,12 @@ export function TopBar() {
         {actor && (
           <span className="small">
             <span className="muted">{t('topbar.balance')}</span> {formatMoney(balanceOf(state.transactions, actor.id))}
+          </span>
+        )}
+        {actor && (
+          <span className="small">
+            <span className="muted">{t('topbar.freeContacts')}</span> {freeContactsLeft(state, actor.id, state.now)}/
+            {CONFIG.freeContactsPerMonth}
           </span>
         )}
         <span className="small">
