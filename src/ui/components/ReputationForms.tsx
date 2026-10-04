@@ -52,7 +52,7 @@ export function ReviewForm({ state, target }: { state: AppState; target: Company
           ))}
         </span>
       </div>
-      <textarea id="rev-text" rows={2} placeholder={t('rep.reviewPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
+      <textarea id="rev-text" placeholder={t('rep.reviewPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
       <div className="inline">
         <button className="btn btn-primary btn-small" onClick={submit}>{t('rep.postReview')}</button>
         <span className="muted small">{t('rep.reviewRule')}</span>
@@ -101,7 +101,7 @@ export function ClaimForm({ state, target }: { state: AppState; target: Company 
   return (
     <div className="panel rep-form">
       <span>{t('rep.claimTitle')}</span>
-      <textarea id="claim-text" rows={2} placeholder={t('rep.claimPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
+      <textarea id="claim-text" placeholder={t('rep.claimPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
       <div className="inline">
         <button className="btn btn-small btn-primary" onClick={() => {
           const res = store.run((s) => fileClaim(s, target.id, text));

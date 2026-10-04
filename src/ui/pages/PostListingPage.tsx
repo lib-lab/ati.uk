@@ -328,7 +328,7 @@ export function PostListingPage() {
           </label>
           <label className="field-wide">
             <span>{t('listing.field.comment')}</span>
-            <textarea id="p-comment" rows={2} value={form.comment} onChange={(e) => set({ comment: e.target.value })} />
+            <textarea id="p-comment" value={form.comment} onChange={(e) => set({ comment: e.target.value })} />
           </label>
         </fieldset>
 

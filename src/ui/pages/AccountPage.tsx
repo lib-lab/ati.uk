@@ -105,7 +105,7 @@ export function AccountPage() {
           <button className="btn btn-small" onClick={() => {
             navigator.clipboard?.writeText(exported).then(() => setCopied(true), () => setCopied(false));
           }}>{copied ? t('account.copied') : t('account.copy')}</button>
-          <textarea id="export-json" readOnly rows={12} value={exported} />
+          <textarea id="export-json" readOnly value={exported} />
         </div>
       )}
 
