@@ -717,6 +717,8 @@ export const en = {
 
   // ----- personal data -----
   'nav.account': 'Account',
+  'theme.toDark': 'Dark theme',
+  'theme.toLight': 'Light theme',
   'time.plusHour': '+1 hour',
   'rep.noPersonalData': 'Do not write names or phone numbers of people: reviews and claims are public. Name the company only.',
   'company.review.textHidden': 'Text hidden on {date} at the request of a former user. The rating stays.',

@@ -62,7 +62,7 @@ describe('design tokens', () => {
   const themes = (() => {
     const read = (block: string) => new Map([...block.matchAll(/--([a-z0-9-]+): (#[0-9a-f]{3,6});/gi)].map((m) => [m[1]!, m[2]!]));
     const light = read(tokens.slice(0, tokens.indexOf('@media (')));
-    const darkBlock = tokens.slice(tokens.indexOf('prefers-color-scheme: dark'));
+    const darkBlock = tokens.slice(tokens.indexOf(":root[data-theme='dark'] {"));
     const dark = new Map([...light, ...read(darkBlock)]);
     return { light, dark };
   })();

@@ -61,7 +61,7 @@ a.btn:hover { text-decoration: none; }
 .nav { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); }
 .nav a { color: var(--muted); }
 .nav a.active { color: var(--accent-text); }
-.topbar-account { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); margin-left: auto; }
+.topbar-account { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-lg); margin-left: auto; }
 .toolbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg);
   padding: var(--space-sm) var(--space-xl); border-bottom: var(--border-width) solid var(--border); background: var(--bg-subtle); font-size: var(--font-size-caption);
