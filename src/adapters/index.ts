@@ -19,8 +19,17 @@ export interface Adapters {
   email: EmailChannel;
 }
 
+const registry = new MockRegistry(SEED_REGISTRY_RECORDS);
+
 export const adapters: Adapters = {
-  registry: new MockRegistry(SEED_REGISTRY_RECORDS),
+  registry,
   payments: new MockPayments(),
   email: new MockEmail(),
 };
+
+/**
+ * Synchronous lookup for the daily registry check inside the simulated clock tick. Only the stub
+ * can answer synchronously; with a real registry the check runs as a background job (DECISIONS).
+ */
+export const registryLookupSync = (country: string, regNumber: string, claimedName: string) =>
+  registry.lookupSync(country, regNumber, claimedName);

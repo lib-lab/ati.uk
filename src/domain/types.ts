@@ -460,6 +460,7 @@ export type EventType =
   | 'dispute_opened'
   | 'dispute_resolved'
   | 'profile_updated'
+  | 'company_registered'
   | 'listing_edited'
   | 'contact_collection'
   | 'consent_changed'

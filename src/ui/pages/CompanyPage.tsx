@@ -6,8 +6,10 @@ import { interactionWeight, reviewWeight } from '../../domain/rules/reviewWeight
 import { canReply, canReplyToClaim, canSettleClaim } from '../../domain/rules/reviews';
 import { fixProfileData } from '../../domain/commands/moderation';
 import { hideReviewText } from '../../domain/commands/privacy';
+import { changeRole } from '../../domain/commands/registration';
+import { ROLES } from '../../domain/rules/registration';
 import { explainRating, type ComponentExplanation } from '../../domain/rules/ratingExplain';
-import { MODERATOR_ID, type AppState, type Claim, type Review } from '../../domain/types';
+import { MODERATOR_ID, type AppState, type Claim, type Review, type Role } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { DisputeButton } from '../components/DisputeButton';
 import { FlagBadge, flagLabel } from '../components/FlagBadge';
@@ -43,6 +45,7 @@ export function CompanyPage() {
             {company.status === 'deactivated' && <> · <strong>{t('company.hiddenInactive')}</strong></>}
             {company.status === 'deleted' && <> · <strong>{t('company.deleted', { date: formatDate(company.deletedAt!) })}</strong></>}
           </div>
+          {state.actorId === company.id && company.status !== 'deleted' && <RoleChange current={company.role} />}
           <div className="badges">
             <MarkBadges rating={rating} company={company} />
             <span className="muted small">{t('owner.reviews', { count: rating.countedReviews })}</span>
@@ -251,3 +254,22 @@ function ClaimItem({ state, claim }: { state: AppState; claim: Claim }) {
 
 const fmt = (v: number | null) => (v === null ? t('owner.componentNA') : String(Math.round(v)));
 const signed = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
+
+/** Own profile: change the role; it decides what the company can post from now on. */
+function RoleChange({ current }: { current: Role }) {
+  const [role, setRole] = useState<Role>(current);
+  const [done, setDone] = useState(false);
+  return (
+    <div className="inline small">
+      <span className="muted">{t('company.role')}</span>
+      <select id="role" value={role} onChange={(e) => { setRole(e.target.value as Role); setDone(false); }}>
+        {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)} — {t(`register.roleHint.${r}`)}</option>)}
+      </select>
+      <button className="btn btn-small" disabled={role === current} onClick={() => {
+        const res = store.run((s) => changeRole(s, role));
+        setDone(res.ok);
+      }}>{t('company.changeRole')}</button>
+      {done && <span className="muted">{t('company.roleChanged', { role: t(`role.${current}`) })}</span>}
+    </div>
+  );
+}

@@ -236,7 +236,7 @@ export function setFlag(state: AppState, companyId: Id, kind: 'fraud_blocked' | 
   return { ok: true, state: withRatingEvents(state, s, { reasonKey: `event.rating.flag.${kind}`, actor: MODERATOR_ID }) };
 }
 
-function closeFlag(state: AppState, flag: Flag, actor: Id, reasonKey: string): AppState {
+export function closeFlag(state: AppState, flag: Flag, actor: Id, reasonKey: string): AppState {
   const s: AppState = { ...state, flags: state.flags.map((f) => (f.id === flag.id ? { ...f, resolvedAt: state.now } : f)) };
   return logEvent(s, { type: 'flag_resolved', actor, subjectIds: [flag.companyId, flag.id], reasonKey, params: { target: flag.companyId } });
 }

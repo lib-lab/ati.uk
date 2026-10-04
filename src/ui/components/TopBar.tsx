@@ -13,6 +13,7 @@ import { MODERATOR_ID, type IsoDate } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { formatDateTime, formatMoney } from '../format';
 import { t } from '../i18n';
+import { APP_TIME_PROCESSES } from '../timeProcesses';
 
 const SHIFTS: { key: string; to: (now: IsoDate) => IsoDate }[] = [
   { key: 'time.plusHour', to: (now) => addHours(now, 1) },
@@ -119,7 +120,7 @@ export function TopBar() {
           <span className="muted">{t('topbar.today')}</span>
           <strong className="nowrap">{formatDateTime(state.now)} UTC</strong>
           {SHIFTS.map((shift) => (
-            <button key={shift.key} className="btn btn-small" onClick={() => store.run((s) => advanceTime(s, shift.to(s.now)))}>
+            <button key={shift.key} className="btn btn-small" onClick={() => store.run((s) => advanceTime(s, shift.to(s.now), APP_TIME_PROCESSES))}>
               {t(shift.key)}
             </button>
           ))}
