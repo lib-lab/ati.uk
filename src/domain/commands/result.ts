@@ -11,6 +11,11 @@ export type CommandError =
   | 'listing_not_active'
   | 'already_open'
   | 'already_priority'
-  | 'template_not_found';
+  | 'template_not_found'
+  | 'invalid_review'
+  | 'review_not_allowed'
+  | 'review_too_soon'
+  | 'invalid_claim'
+  | 'claim_not_allowed';
 
 export type CommandResult = { ok: true; state: AppState } | { ok: false; error: CommandError };

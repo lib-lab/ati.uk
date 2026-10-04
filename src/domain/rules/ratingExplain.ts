@@ -88,10 +88,8 @@ function claimsLines(input: RatingInput, id: Id): ExplainLine[] {
   const claims = input.claims.filter((c) => c.targetId === id);
   const open = claims.filter((c) => c.status === 'open').length;
   const penalty = Math.min(100, open * R.claims.penaltyPerOpenClaim);
-  const lines: ExplainLine[] = [
-    { key: 'explain.claims.base', params: {}, points: 100 },
-    { key: 'explain.claims.open', params: { count: open, penalty: R.claims.penaltyPerOpenClaim }, points: -penalty },
-  ];
+  const lines: ExplainLine[] = [{ key: 'explain.claims.base', params: {}, points: 100 }];
+  if (open > 0) lines.push({ key: 'explain.claims.open', params: { count: open, penalty: R.claims.penaltyPerOpenClaim }, points: -penalty });
   const closed = claims.length - open;
   if (closed > 0) lines.push({ key: 'explain.claims.closed', params: { count: closed }, points: null });
   return lines;

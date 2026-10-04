@@ -190,3 +190,11 @@ select, input {
 .my-form { background: var(--bg-subtle); border-radius: var(--radius); padding: 6px 8px; }
 .my-listing p { margin: 0; }
 a.btn { display: inline-block; text-decoration: none; }
+
+/* ---- reviews and claims ---- */
+.rep-form { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-width: 640px; }
+.rep-form textarea, .reply-form input { width: 100%; font: inherit; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; }
+.reply-form input { width: auto; flex: 1 1 200px; }
+.star-input { display: inline-flex; }
+.star { border: none; background: none; font-size: 20px; line-height: 1; color: var(--border); cursor: pointer; padding: 0 2px; }
+.star.on { color: var(--text); }

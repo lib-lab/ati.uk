@@ -1,11 +1,13 @@
 import { Link, useParams } from 'react-router-dom';
 import { activeFlags } from '../../domain/rules/flags';
 import { countedReviews, recencyWeight } from '../../domain/rules/rating';
+import { canReply, canSettleClaim } from '../../domain/rules/reviews';
 import { explainRating, type ComponentExplanation } from '../../domain/rules/ratingExplain';
 import type { AppState, Claim, Review } from '../../domain/types';
 import { useAppState } from '../../store/store';
 import { FlagBadge } from '../components/FlagBadge';
 import { MarkBadges } from '../components/OwnerSummary';
+import { ClaimForm, ReplyForm, ReviewForm, SettleButton } from '../components/ReputationForms';
 import { formatDate, formatDateTime } from '../format';
 import { t } from '../i18n';
 import { companyName, eventText } from '../eventText';
@@ -62,11 +64,13 @@ export function CompanyPage() {
       </div>
 
       <h2>{t('company.reviewsTitle', { count: reviews.length })}</h2>
+      <ReviewForm state={state} target={company} />
       {reviews.length === 0 ? <p className="muted">{t('company.noReviews')}</p> : (
         <ul className="list">{reviews.map((r) => <ReviewItem key={r.id} state={state} review={r} />)}</ul>
       )}
 
       <h2>{t('company.claimsTitle', { count: claims.length })}</h2>
+      <ClaimForm state={state} target={company} />
       {claims.length === 0 ? <p className="muted">{t('company.noClaims')}</p> : (
         <ul className="list">{claims.map((c) => <ClaimItem key={c.id} state={state} claim={c} />)}</ul>
       )}
@@ -153,6 +157,7 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
       </div>
       {review.text && <div>{review.text}</div>}
       {review.reply && <div className="reply small"><span className="muted">{t('company.review.reply')}</span> {review.reply.text}</div>}
+      {canReply(review, state.actorId) && <ReplyForm review={review} />}
     </li>
   );
 }
@@ -169,6 +174,7 @@ function ClaimItem({ state, claim }: { state: AppState; claim: Claim }) {
         </span>
       </div>
       <div>{claim.text}</div>
+      {canSettleClaim(claim, state.actorId) && <div><SettleButton claim={claim} /></div>}
     </li>
   );
 }
