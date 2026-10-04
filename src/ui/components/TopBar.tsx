@@ -57,6 +57,8 @@ export function TopBar() {
   // In-page confirmation: window.confirm() is not available in every host (e.g. embedded previews).
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [bot, setBot] = useState<{ actorId: string; text: string } | null>(null);
+  // On narrow screens the test tools collapse into one line (see styles: .toolbar.collapsed).
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   return (
     <header>
@@ -111,8 +113,13 @@ export function TopBar() {
         </div>
       </div>
 
-      <div className="toolbar" aria-label={t('topbar.tools')}>
+      <div className={toolsOpen ? 'toolbar' : 'toolbar collapsed'} aria-label={t('topbar.tools')}>
         <span className="toolbar-label">{t('topbar.tools')}</span>
+        <button type="button" className="toolbar-toggle" aria-expanded={toolsOpen} onClick={() => setToolsOpen((x) => !x)}>
+          <span className="toolbar-label-text">{t('topbar.tools')}</span>
+          <span className="toolbar-summary">{actor ? actor.legalName : t('role.moderator')} · {formatDateTime(state.now)}</span>
+          <span aria-hidden="true">{toolsOpen ? '▴' : '▾'}</span>
+        </button>
         <label className="inline">
           <span className="muted">{t('topbar.actingAs')}</span>
           <select id="actor" value={state.actorId} onChange={(e) => store.run((s) => loginAs(s, e.target.value))}>

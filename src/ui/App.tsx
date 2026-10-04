@@ -1,4 +1,5 @@
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Fragment, type ReactNode } from 'react';
+import { HashRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { InactiveBanner } from './components/InactiveBanner';
 import { TopBar } from './components/TopBar';
 import { AccountPage } from './pages/AccountPage';
@@ -24,12 +25,12 @@ export function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/search" replace />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/listing/:id" element={<ListingPage />} />
+          <Route path="/listing/:id" element={<PerId><ListingPage /></PerId>} />
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/company/:id" element={<CompanyPage />} />
+          <Route path="/company/:id" element={<PerId><CompanyPage /></PerId>} />
           <Route path="/post" element={<PostListingPage />} />
-          <Route path="/edit/:id" element={<PostListingPage key="edit" />} />
+          <Route path="/edit/:id" element={<PerId><PostListingPage key="edit" /></PerId>} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/my-listings" element={<MyListingsPage />} />
           <Route path="/balance" element={<BalancePage />} />
@@ -42,4 +43,13 @@ export function App() {
       </main>
     </HashRouter>
   );
+}
+
+/**
+ * Pages with an :id keep no state across ids: moving from one listing or company to another
+ * starts fresh (otherwise e.g. an open "Open anyway" confirmation would carry over).
+ */
+function PerId({ children }: { children: ReactNode }) {
+  const { id } = useParams();
+  return <Fragment key={id}>{children}</Fragment>;
 }
