@@ -4,7 +4,7 @@ import { CITIES } from '../domain/geo/cities';
 import { roadDistanceKm } from '../domain/geo/distance';
 import { FLAG_LEVEL, flagKindsFromVerification, profileMatchesRecord } from '../domain/rules/flags';
 import { computeExpiresAt } from '../domain/rules/lifetime';
-import { addDays, addHours, daysBetween, fromMs, isBefore, startOfDay, toMs } from '../domain/time';
+import { addDays, addHours, addMonths, daysBetween, fromMs, isBefore, startOfDay, toMs } from '../domain/time';
 import {
   type AppState,
   type BodyType,
@@ -12,6 +12,7 @@ import {
   type Claim,
   type Company,
   type ContactAccess,
+  type ContactOpening,
   type Flag,
   type IsoDate,
   type LedgerTransaction,
@@ -27,7 +28,7 @@ import { createRng, type Rng } from './random';
 import { buildRing, RING_SPECS } from './ring';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 
@@ -296,6 +297,17 @@ export function buildSeedState(): AppState {
 
   transactions.sort((a, b) => toMs(a.createdAt) - toMs(b.createdAt));
 
+  // Opening log: one entry per contact access (the opening that created it). Entries older than the
+  // retention period are already anonymised, as the daily process would have done.
+  const retentionStart = addMonths(now, -CONFIG.openingLogRetentionMonths);
+  const contactOpenings: ContactOpening[] = accesses.map((a, i) => {
+    const old = isBefore(a.openedAt, retentionStart);
+    return {
+      id: `o${String(i + 1).padStart(4, '0')}`, viewerId: old ? null : a.viewerId, ownerId: a.ownerId, listingId: a.firstListingId,
+      at: a.openedAt, createdAccess: true, viaCard: true, anonymizedAt: old ? now : undefined,
+    };
+  });
+
   return {
     version: STATE_VERSION,
     now,
@@ -303,6 +315,8 @@ export function buildSeedState(): AppState {
     companies,
     listings,
     contactAccesses: accesses,
+    contactOpenings,
+    listingChanges: [],
     transactions,
     packages: [],
     reviews,
@@ -332,7 +346,7 @@ function buildCompany(s: CompanySpec, now: IsoDate): Company {
     regNumber: s.regNumber,
     regNumberType: s.regNumberType,
     role: s.role,
-    contactPersons: s.persons.map((p, i) => ({ id: `${s.id}-p${i + 1}`, ...p })),
+    contactPersons: s.persons.map((p, i) => ({ id: `${s.id}-p${i + 1}`, ...p, consent: { givenAt: addDays(now, -Math.round(s.joinedMonthsAgo * 30.44)) } })),
     joinedAt: addDays(now, -Math.round(s.joinedMonthsAgo * 30.44)),
     lastLoginAt: addDays(now, -s.lastLoginDaysAgo),
     status: 'active',

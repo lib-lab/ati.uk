@@ -12,7 +12,7 @@ export type RatingOf = (companyId: Id) => Rating;
 
 /** Owner's listings are hidden from everyone but the owner. */
 export function ownerListingsHidden(company: Company, flags: AppState['flags']): boolean {
-  return company.status === 'deactivated' || company.listingsHiddenUntilContactConfirmed || isBlocked(flags, company.id);
+  return company.status !== 'active' || company.listingsHiddenUntilContactConfirmed || isBlocked(flags, company.id);
 }
 
 export function isVisibleInSearch(state: Pick<AppState, 'companies' | 'flags'>, listing: Listing, now: IsoDate): boolean {
@@ -70,12 +70,12 @@ export function matchesFilters(listing: Listing, f: SearchFilters, ratingOf?: Ra
   return true;
 }
 
-export function hasPriority(listing: Listing, now: IsoDate): boolean {
+export function hasPriority(listing: Pick<Listing, 'priorityUntil'>, now: IsoDate): boolean {
   return !!listing.priorityUntil && toMs(now) < toMs(listing.priorityUntil);
 }
 
 /** Rate per km in cents, or null without a fixed rate or a known destination. */
-export function ratePerKm(l: Listing): number | null {
+export function ratePerKm(l: Pick<Listing, 'rate' | 'from' | 'to'>): number | null {
   if (l.rate.mode !== 'fixed' || l.rate.amount === undefined || 'any' in l.to) return null;
   const km = roadDistanceKm(l.from.cityId, l.to.cityId);
   return km > 0 ? l.rate.amount / km : null;

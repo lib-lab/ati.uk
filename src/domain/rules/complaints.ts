@@ -17,7 +17,7 @@ export type ComplaintEligibility =
 export function canComplain(
   state: Pick<AppState, 'companies' | 'contactAccesses' | 'complaints'>,
   reporterId: Id,
-  listing: Listing,
+  listing: Pick<Listing, 'id' | 'ownerId'>,
   type: ComplaintType,
 ): ComplaintEligibility {
   if (!state.companies.some((c) => c.id === reporterId)) return { ok: false, reason: 'not_company' };

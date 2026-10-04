@@ -109,6 +109,7 @@ function MyListingRow({ state, listing: l }: { state: AppState; listing: Listing
             {t('my.priority', { price: formatMoney(CONFIG.prices.priority) })}
           </button>
         )}
+        {l.status === 'active' && <Link to={`/edit/${l.id}`} className="btn btn-small">{t('listing.edit')}</Link>}
         {canExtend && mode !== 'extend' && (
           <button className="btn btn-small" onClick={() => { setMode('extend'); setMessage(null); }}>{t('my.extend')}</button>
         )}

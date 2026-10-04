@@ -39,6 +39,7 @@ export function CompanyPage() {
             {t(`role.${company.role}`)} · {company.country} · {company.regNumberType} {company.regNumber} ·{' '}
             {t('company.joined', { date: formatDate(company.joinedAt) })}
             {company.status === 'deactivated' && <> · <strong>{t('company.hiddenInactive')}</strong></>}
+            {company.status === 'deleted' && <> · <strong>{t('company.deleted', { date: formatDate(company.deletedAt!) })}</strong></>}
           </div>
           <div className="badges">
             <MarkBadges rating={rating} company={company} />

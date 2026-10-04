@@ -10,6 +10,7 @@ export function readableParams(state: AppState, params: Params): Params {
   const out: Params = {};
   for (const [k, v] of Object.entries(params)) {
     if (k === 'amount' && typeof v === 'number') out[k] = formatMoney(v);
+    else if (k === 'fields' && typeof v === 'string') out[k] = v.split(', ').map((f) => t(`listing.changeField.${f}`).toLowerCase()).join('; ');
     else if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) out[k] = formatDateTime(v);
     else if (typeof v === 'string') out[k] = companyName(state, v) ?? v;
     else out[k] = v;

@@ -9,7 +9,7 @@ import { t } from '../i18n';
 
 const TYPES: ComplaintType[] = ['outdated', 'no_response', 'wrong_contact'];
 
-export function ComplaintBlock({ state, listing }: { state: AppState; listing: Listing }) {
+export function ComplaintBlock({ state, listing }: { state: AppState; listing: Pick<Listing, 'id' | 'ownerId'> }) {
   const [message, setMessage] = useState<string | null>(null);
   const isCompany = state.companies.some((c) => c.id === state.actorId);
   if (!isCompany || listing.ownerId === state.actorId) return null;

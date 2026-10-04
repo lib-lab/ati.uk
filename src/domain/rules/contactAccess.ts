@@ -46,7 +46,9 @@ export type ContactDecision =
 
 /** Order: own → already open → open listing → free quota → package → balance. */
 export function decideContact(input: ContactInput, viewerId: Id, listing: Listing, now: IsoDate): ContactDecision {
-  if (!input.companies.some((c) => c.id === viewerId)) return { kind: 'unavailable', reason: 'not_a_company' };
+  const viewer = input.companies.find((c) => c.id === viewerId);
+  if (!viewer || viewer.status === 'deleted') return { kind: 'unavailable', reason: 'not_a_company' };
+  if (input.companies.find((c) => c.id === listing.ownerId)?.status === 'deleted') return { kind: 'unavailable', reason: 'listing_inactive' };
   if (listing.ownerId === viewerId) return { kind: 'own_listing' };
   if (findAccess(input, viewerId, listing.ownerId)) return { kind: 'already_open' };
   if (listing.status !== 'active' || isExpired(listing, now)) return { kind: 'unavailable', reason: 'listing_inactive' };

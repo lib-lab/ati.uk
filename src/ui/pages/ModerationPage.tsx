@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { unblockCollection } from '../../domain/commands/contacts';
 import { resolveDispute } from '../../domain/commands/disputes';
 import {
   confirmClaim, confirmComplaint, confirmFraud, rejectClaim, rejectComplaint, resolveFlag, runDetector, setFlag,
 } from '../../domain/commands/moderation';
 import type { CommandResult } from '../../domain/commands/result';
 import { settleClaim } from '../../domain/commands/reviews';
+import { openingsToday } from '../../domain/rules/collection';
 import { complaintShare, refundFor, refundPlan } from '../../domain/rules/complaints';
 import { findAccess } from '../../domain/rules/contactAccess';
 import { detectSuspicions } from '../../domain/rules/detector';
@@ -18,7 +20,7 @@ import { t } from '../i18n';
 import { companyName, eventText } from '../eventText';
 import { fromName, toName } from '../listingFormat';
 
-type Tab = 'complaints' | 'claims' | 'flags' | 'disputes';
+type Tab = 'complaints' | 'claims' | 'flags' | 'disputes' | 'collection';
 type Run = (c: (s: AppState) => CommandResult, done: string) => void;
 
 export function ModerationPage() {
@@ -35,15 +37,16 @@ export function ModerationPage() {
   const liveClaims = state.claims.filter((c) => c.status === 'open' || c.status === 'confirmed');
   const activeFlagList = state.flags.filter((f) => !f.resolvedAt);
   const openDisputes = state.disputes.filter((d) => d.status === 'open');
+  const guarded = state.companies.filter((c) => c.collection && c.collection.state !== 'ok');
   const counts: Record<Tab, number> = {
-    complaints: pending.length, claims: liveClaims.length, flags: activeFlagList.length, disputes: openDisputes.length,
+    complaints: pending.length, claims: liveClaims.length, flags: activeFlagList.length, disputes: openDisputes.length, collection: guarded.length,
   };
 
   return (
     <section>
       <h1>{t('mod.title')}</h1>
       <div className="tabs" role="tablist">
-        {(['complaints', 'claims', 'flags', 'disputes'] as Tab[]).map((k) => (
+        {(['complaints', 'claims', 'flags', 'disputes', 'collection'] as Tab[]).map((k) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'tab active' : 'tab'} onClick={() => { setTab(k); setMessage(null); }}>
             {t(`mod.tab.${k}`, { count: counts[k] })}
           </button>
@@ -54,6 +57,7 @@ export function ModerationPage() {
       {tab === 'claims' && <Claims state={state} run={run} />}
       {tab === 'flags' && <Flags state={state} run={run} />}
       {tab === 'disputes' && <Disputes state={state} open={openDisputes} run={run} />}
+      {tab === 'collection' && <Collection state={state} run={run} />}
     </section>
   );
 }
@@ -129,6 +133,38 @@ function Claims({ state, run }: { state: AppState; run: Run }) {
               <button className="btn btn-small" onClick={() => run((s) => settleClaim(s, c.id), t('mod.claimSettled'))}>{t('mod.settle')}</button>
               <button className="btn btn-small btn-ghost" onClick={() => run((s) => rejectClaim(s, c.id), t('mod.claimRejected'))}>{t('mod.rejectClaim')}</button>
             </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Companies slowed down or blocked for signs of contact collection (TZ: "Against collecting contacts"). */
+function Collection({ state, run }: { state: AppState; run: Run }) {
+  const guarded = state.companies.filter((c) => c.collection && c.collection.state !== 'ok');
+  if (guarded.length === 0) return <p className="muted">{t('mod.collection.empty')}</p>;
+  return (
+    <ul className="list">
+      {guarded.map((c) => {
+        const g = c.collection!;
+        return (
+          <li key={c.id} className="list-item review">
+            <div className="inline">
+              <span className={g.state === 'blocked' ? 'badge badge-red' : 'badge badge-yellow'}>{t(`mod.collection.state.${g.state}`)}</span>
+              <Link to={`/company/${c.id}`}>{c.legalName}</Link>
+              <span className="muted small">
+                {t('mod.collection.since', { date: formatDate(g.since) })} · {t('mod.collection.today', { count: openingsToday(state, c.id, state.now) })}
+              </span>
+            </div>
+            <div className="small">{g.reasons.map((r) => t(r)).join('; ')}</div>
+            {g.state === 'blocked' && (
+              <div>
+                <button className="btn btn-small" onClick={() => run((s) => unblockCollection(s, c.id), t('event.collection.unblocked', { company: c.legalName }))}>
+                  {t('mod.collection.unblock')}
+                </button>
+              </div>
+            )}
           </li>
         );
       })}

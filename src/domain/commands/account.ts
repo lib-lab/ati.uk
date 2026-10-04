@@ -16,7 +16,7 @@ export const inactivityProcess: TimeProcess = {
   run(state, _from, to) {
     let s: AppState = state;
     for (const c of state.companies) {
-      if (c.status === 'deactivated') continue;
+      if (c.status !== 'active') continue;
       const hide = hideAt(c);
       if (!isBefore(to, hide)) {
         s = { ...s, companies: s.companies.map((x) => (x.id === c.id ? { ...x, status: 'deactivated' } : x)) };

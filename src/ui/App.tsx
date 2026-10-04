@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { InactiveBanner } from './components/InactiveBanner';
 import { TopBar } from './components/TopBar';
+import { AccountPage } from './pages/AccountPage';
 import { BalancePage } from './pages/BalancePage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyPage } from './pages/CompanyPage';
@@ -25,6 +26,8 @@ export function App() {
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="/company/:id" element={<CompanyPage />} />
           <Route path="/post" element={<PostListingPage />} />
+          <Route path="/edit/:id" element={<PostListingPage key="edit" />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/my-listings" element={<MyListingsPage />} />
           <Route path="/balance" element={<BalancePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />

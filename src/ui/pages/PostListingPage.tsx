@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { postListing, saveTemplate, deleteTemplate } from '../../domain/commands/listings';
+import { useNavigate, useParams } from 'react-router-dom';
+import { deleteTemplate, draftOf, editListing, postListing, saveTemplate } from '../../domain/commands/listings';
 import { CITIES } from '../../domain/geo/cities';
 import { postableKinds, validateDraft, type DraftErrors, type ListingDraft } from '../../domain/rules/listingDraft';
 import type { BodyType, ListingKind, LoadingMethod, PaymentMethod } from '../../domain/types';
+import { CONFIG } from '../../domain/config';
 import { store, useAppState } from '../../store/store';
 import { t } from '../i18n';
 import { getCompany } from '../selectors';
@@ -69,13 +70,46 @@ function emptyForm(kind: ListingKind, contactPersonId: string, today: string): F
   };
 }
 
+/** Fills the form from a (partial) draft: templates and editing. */
+function formFromDraft(cur: Form, f: Partial<ListingDraft>, kind: ListingKind): Form {
+  const to = f.to;
+  return {
+    ...cur,
+    kind,
+    contactPersonId: f.contactPersonId ?? cur.contactPersonId,
+    fromCityId: f.from?.cityId ?? '',
+    fromAddress: f.from?.address ?? '',
+    toCityId: to && !('any' in to) ? to.cityId : '',
+    toAny: !!to && 'any' in to,
+    dateFrom: f.dateFrom ? f.dateFrom.slice(0, 10) : cur.dateFrom,
+    dateTo: f.dateTo ? f.dateTo.slice(0, 10) : f.dateFrom ? '' : cur.dateTo,
+    bodyTypes: f.bodyTypes ?? [],
+    weightT: f.weightT !== undefined ? String(f.weightT) : '',
+    volumeM3: f.volumeM3 !== undefined ? String(f.volumeM3) : '',
+    loadingMethods: f.loadingMethods ?? [],
+    rateMode: f.rate?.mode ?? 'fixed',
+    rateAmount: f.rate?.amount !== undefined ? String(f.rate.amount / 100) : '',
+    vatIncluded: f.rate?.vatIncluded ?? false,
+    paymentMethod: f.rate?.paymentMethod ?? 'bank_transfer',
+    comment: f.comment ?? '',
+    cargoName: f.cargoName ?? '',
+    packaging: f.packaging ?? '',
+    pieces: f.pieces !== undefined ? String(f.pieces) : '',
+  };
+}
+
 export function PostListingPage() {
   const state = useAppState((s) => s);
   const navigate = useNavigate();
+  const { id: editId } = useParams();
   const owner = getCompany(state, state.actorId);
+  const editing = editId ? state.listings.find((l) => l.id === editId && l.ownerId === state.actorId) : undefined;
   const kinds = owner ? postableKinds(owner.role) : [];
   const today = state.now.slice(0, 10);
-  const [form, setForm] = useState<Form>(() => emptyForm(kinds[0] ?? 'cargo', owner?.contactPersons[0]?.id ?? '', today));
+  const [form, setForm] = useState<Form>(() => {
+    const empty = emptyForm(kinds[0] ?? 'cargo', owner?.contactPersons[0]?.id ?? '', today);
+    return editing ? formFromDraft(empty, draftOf(editing), editing.kind) : empty;
+  });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState('');
@@ -93,38 +127,16 @@ export function PostListingPage() {
   const applyTemplate = (id: string) => {
     const tp = templates.find((x) => x.id === id);
     if (!tp) return;
-    const f = tp.fields as Partial<ListingDraft>;
-    const to = f.to;
-    setForm((cur) => ({
-      ...cur,
-      kind: tp.kind,
-      contactPersonId: f.contactPersonId ?? cur.contactPersonId,
-      fromCityId: f.from?.cityId ?? '',
-      fromAddress: f.from?.address ?? '',
-      toCityId: to && !('any' in to) ? to.cityId : '',
-      toAny: !!to && 'any' in to,
-      bodyTypes: f.bodyTypes ?? [],
-      weightT: f.weightT !== undefined ? String(f.weightT) : '',
-      volumeM3: f.volumeM3 !== undefined ? String(f.volumeM3) : '',
-      loadingMethods: f.loadingMethods ?? [],
-      rateMode: f.rate?.mode ?? 'fixed',
-      rateAmount: f.rate?.amount !== undefined ? String(f.rate.amount / 100) : '',
-      vatIncluded: f.rate?.vatIncluded ?? false,
-      paymentMethod: f.rate?.paymentMethod ?? 'bank_transfer',
-      comment: f.comment ?? '',
-      cargoName: f.cargoName ?? '',
-      packaging: f.packaging ?? '',
-      pieces: f.pieces !== undefined ? String(f.pieces) : '',
-    }));
+    setForm((cur) => formFromDraft(cur, tp.fields as Partial<ListingDraft>, tp.kind));
   };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
     if (Object.keys(errors).length > 0) return;
-    const res = store.run((s) => postListing(s, draft));
+    const res = store.run((s) => (editing ? editListing(s, editing.id, draft) : postListing(s, draft)));
     if (!res.ok) return setError(t(`error.${res.error}`));
-    navigate(`/listing/${res.state.listings.at(-1)!.id}`);
+    navigate(`/listing/${editing ? editing.id : res.state.listings.at(-1)!.id}`);
   };
 
   const onSaveTemplate = () => {
@@ -138,8 +150,10 @@ export function PostListingPage() {
 
   return (
     <section>
-      <h1>{t('post.title')}</h1>
-      {kinds.length > 1 && (
+      <h1>{editing ? t('post.editTitle', { id: editing.id }) : t('post.title')}</h1>
+      {editing && <p className="alert alert-neutral">{t('post.editNote', { hours: CONFIG.editRefundHours })}</p>}
+      {editId && !editing && <p className="alert alert-red">{t('error.not_allowed')}</p>}
+      {!editing && kinds.length > 1 && (
         <div className="tabs" role="tablist">
           {kinds.map((k) => (
             <button key={k} type="button" role="tab" aria-selected={form.kind === k} className={form.kind === k ? 'tab active' : 'tab'}
@@ -151,7 +165,7 @@ export function PostListingPage() {
       )}
       {kinds.length === 1 && <p className="muted">{t('post.onlyKind', { kind: t(`kind.${kinds[0]}.one`) })}</p>}
 
-      {templates.length > 0 && (
+      {!editing && templates.length > 0 && (
         <div className="inline template-bar">
           <label className="inline">
             <span className="muted">{t('post.fromTemplate')}</span>
@@ -321,7 +335,7 @@ export function PostListingPage() {
         {submitted && Object.keys(errors).length > 0 && <p className="alert alert-red">{t('post.fixErrors')}</p>}
         {error && <p className="alert alert-red">{error}</p>}
         <div className="inline">
-          <button type="submit" className="btn btn-primary">{t('post.submit')}</button>
+          <button type="submit" className="btn btn-primary">{editing ? t('post.saveChanges') : t('post.submit')}</button>
           <span className="muted small">{t('post.freeNote')}</span>
         </div>
         <div className="inline template-bar">

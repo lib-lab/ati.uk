@@ -59,16 +59,19 @@ export function respondToComplaint(state: AppState, complaintId: Id, text: strin
   };
 }
 
-/** Applies a refund for one reporter's contact with the target; logs and notifies. */
-function applyRefund(state: AppState, reporterId: Id, targetId: Id, complaintId: Id): AppState {
+/**
+ * Refunds a company's contact with the target (money or free quota), within the per-account limit;
+ * logs and notifies. `cause` selects the texts: a confirmed complaint or a listing edited after opening.
+ */
+export function refundContact(state: AppState, reporterId: Id, targetId: Id, refId: Id, cause: 'complaint' | 'edit' = 'complaint'): AppState {
   const access = findAccess(state, reporterId, targetId);
   const refund = refundFor(state, access, state.now);
   if (refund.kind === 'none') {
     if (refund.reason !== 'limit_reached') return state;
     return logEvent(state, {
       type: 'refund',
-      actor: MODERATOR_ID,
-      subjectIds: [reporterId, targetId, complaintId],
+      actor: cause === 'complaint' ? MODERATOR_ID : reporterId,
+      subjectIds: [reporterId, targetId, refId],
       reasonKey: 'event.refund.limit',
       params: { target: targetId, limit: CONFIG.complaints.refundLimitPerWindow, days: CONFIG.complaints.windowDays },
     });
@@ -77,21 +80,24 @@ function applyRefund(state: AppState, reporterId: Id, targetId: Id, complaintId:
   if (refund.kind === 'money') {
     let txId: Id;
     [s, txId] = nextId(s, 't');
-    s = { ...s, transactions: [...s.transactions, { id: txId, companyId: reporterId, type: 'refund', amount: refund.amount, createdAt: s.now, refId: complaintId }] };
-    s = { ...s, complaints: s.complaints.map((c) => (c.reporterId === reporterId && c.targetId === targetId && c.status === 'confirmed' && !c.refundTransactionId ? { ...c, refundTransactionId: txId } : c)) };
+    s = { ...s, transactions: [...s.transactions, { id: txId, companyId: reporterId, type: 'refund', amount: refund.amount, createdAt: s.now, refId }] };
+    if (cause === 'complaint') {
+      s = { ...s, complaints: s.complaints.map((c) => (c.reporterId === reporterId && c.targetId === targetId && c.status === 'confirmed' && !c.refundTransactionId ? { ...c, refundTransactionId: txId } : c)) };
+    }
   }
+  const suffix = cause === 'edit' ? 'Edit' : '';
   s = logEvent(s, {
     type: 'refund',
-    actor: MODERATOR_ID,
-    subjectIds: [reporterId, targetId, complaintId],
-    reasonKey: refund.kind === 'money' ? 'event.refund.money' : 'event.refund.quota',
+    actor: cause === 'complaint' ? MODERATOR_ID : reporterId,
+    subjectIds: [reporterId, targetId, refId],
+    reasonKey: refund.kind === 'money' ? `event.refund.money${suffix}` : `event.refund.quota${suffix}`,
     params: refund.kind === 'money' ? { amount: refund.amount, target: targetId } : { target: targetId },
   });
   return addNotification(
     s,
     reporterId,
     'refund',
-    refund.kind === 'money' ? { variant: 'money', amount: refund.amount, target: targetId } : { variant: 'quota', target: targetId },
+    refund.kind === 'money' ? { variant: `money${suffix}`, amount: refund.amount, target: targetId } : { variant: `quota${suffix}`, target: targetId },
   );
 }
 
@@ -112,7 +118,7 @@ function resolveComplaint(state: AppState, complaintId: Id, status: 'confirmed' 
   });
   s = addNotification(s, c.reporterId, 'complaint_resolved', { variant: status, target: c.targetId, listing: c.listingId });
 
-  if (plan.kind === 'refund') for (const reporterId of plan.reporterIds) s = applyRefund(s, reporterId, c.targetId, c.id);
+  if (plan.kind === 'refund') for (const reporterId of plan.reporterIds) s = refundContact(s, reporterId, c.targetId, c.id);
 
   // Share of confirmed complaints from opened contacts above the threshold → listings hidden
   // until the owner confirms the contact data (TZ).

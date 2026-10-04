@@ -2,7 +2,7 @@
 import { getCity } from '../domain/geo/cities';
 import { roadDistanceKm } from '../domain/geo/distance';
 import { ratePerKm } from '../domain/rules/search';
-import type { Listing } from '../domain/types';
+import type { PublicListing as Listing } from '../domain/rules/contactPrivacy';
 import { formatDate, formatMoney } from './format';
 import { t } from './i18n';
 

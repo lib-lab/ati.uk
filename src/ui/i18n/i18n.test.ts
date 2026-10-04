@@ -35,6 +35,7 @@ describe('i18n', () => {
       keys.add(`event.rating.flag.${kind}`);
       keys.add(`event.rating.flagResolved.${kind}`);
     }
+    for (const kind of ['money', 'quota']) keys.add(`event.refund.${kind}Edit`);
     for (const k of [...keys]) if (k.endsWith('.')) keys.delete(k);
     const missing = [...keys].filter((k) => !(k in en));
     expect(missing).toEqual([]);
@@ -62,6 +63,12 @@ describe('i18n', () => {
       'notification.flag_escalated.data_mismatch',
       'notification.dispute_resolved.accepted',
       'notification.dispute_resolved.rejected',
+      'notification.listing_changed.key',
+      'notification.listing_changed.minor',
+      'notification.refund.moneyEdit',
+      'notification.refund.quotaEdit',
+      'notification.collection_slowed',
+      'notification.collection_blocked',
     ];
     expect(keys.filter((k) => !(k in en))).toEqual([]);
   });
@@ -72,6 +79,15 @@ describe('i18n', () => {
       for (const m of readFileSync(f, 'utf8').matchAll(/'(explain\.[a-zA-Z.]+)'/g)) keys.add(m[1]!);
     }
     expect([...keys].filter((k) => !(k in en))).toEqual([]);
+  });
+
+  it('has a label for every event type and a text for every collection signal', () => {
+    const types = readFileSync('src/domain/types.ts', 'utf8').match(/export type EventType =([^;]+);/)![1]!;
+    const keys = [...types.matchAll(/'([a-z_]+)'/g)].map((m) => `eventType.${m[1]}`);
+    for (const f of files('src/domain')) {
+      for (const m of readFileSync(f, 'utf8').matchAll(/'(collection\.signal\.[a-zA-Z]+)'/g)) keys.push(m[1]!);
+    }
+    expect(keys.filter((k) => !(k in en))).toEqual([]);
   });
 
   it('substitutes params and falls back to the key', () => {

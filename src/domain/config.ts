@@ -78,6 +78,31 @@ export const CONFIG = {
   /** Yellow flag only for a closed ring of companies without outside activity. [A] */
   detector: { ringMinSize: 3, ringClosedShare: 0.95 },
 
+  /** Editing a key field within this many hours after a paid opening lets the viewer get a refund (TZ). */
+  editRefundHours: 24,
+
+  /** Against collecting contacts (TZ). [A] except the daily limit. */
+  collection: {
+    dailyOpenLimit: 50, // TZ starting value: new contact openings per company per calendar day
+    raisedDailyOpenLimit: 150,
+    /** "Company with history" for a raised limit without review. */
+    historyMinMonths: 3,
+    historyMinOpenings: 8, // [A] low enough for seed companies c04 and c12 to show the raise
+    // signals
+    burstCount: 10,
+    burstMinutes: 5,
+    noCardViewCount: 5,
+    directionsCount: 15,
+    signalWindowHours: 24,
+    // response
+    slowedPerHour: 5,
+    failedChecksToBlock: 3,
+    recoverHours: 24,
+  },
+
+  /** Contact opening log is anonymised after this many months (TZ starting value). */
+  openingLogRetentionMonths: 12,
+
   /** Hidden from search after this many months without login; warning before (TZ). */
   inactivity: { hideAfterMonths: 6, warnDaysBefore: 14 },
 

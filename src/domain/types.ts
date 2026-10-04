@@ -14,7 +14,10 @@ export type RegNumberType = 'NIP' | 'VAT' | 'EIN' | 'INN' | 'ICO' | 'KVK';
 export interface ContactPerson {
   id: Id;
   name: string;
+  /** Work contact only (TZ: personal data). */
   phone: string;
+  /** Consent to show the person's data; given at registration, can be withdrawn. */
+  consent: { givenAt: IsoDate; withdrawnAt?: IsoDate };
 }
 
 export type RegistryStatus = 'active' | 'liquidated' | 'bankrupt';
@@ -39,7 +42,23 @@ export interface Verification {
   matchesProfile: boolean;
 }
 
-export type CompanyStatus = 'active' | 'deactivated';
+/** deactivated = hidden after inactivity; deleted = account deleted, personal data removed. */
+export type CompanyStatus = 'active' | 'deactivated' | 'deleted';
+
+/** Anti-collection state (TZ: "Against collecting contacts"). */
+export interface CollectionGuard {
+  state: 'ok' | 'slowed' | 'blocked';
+  since: IsoDate;
+  /** Signals that triggered the current state (i18n keys). */
+  reasons: string[];
+  /** Attempts while slowed without the human check; too many → blocked. */
+  failedChecks: number;
+  /**
+   * When contacts were opened while slowed (for the hourly cap). Kept apart from the opening log,
+   * so the openings that triggered the slowdown do not use up the cap.
+   */
+  openedWhileSlowed?: IsoDate[];
+}
 
 /** Why a company's listings are hidden from search (if they are). */
 export type ListingsHiddenReason = 'complaints' | 'blocked' | 'deactivated';
@@ -62,6 +81,10 @@ export interface Company {
   contactConfirmedAt?: IsoDate;
   /** Sent 2 weeks before hiding an inactive company. */
   inactivityWarnedAt?: IsoDate;
+  /** Raised daily limit of new contact openings (on request, for companies with history). */
+  dailyOpenLimit?: number;
+  collection?: CollectionGuard;
+  deletedAt?: IsoDate;
   /** Simulated device fingerprint, used by the linked-accounts detector. */
   deviceId: string;
 }
@@ -176,6 +199,34 @@ export interface LedgerTransaction {
   createdAt: IsoDate;
   /** Related entity: listing, contact access, complaint, package. */
   refId?: Id;
+}
+
+/**
+ * Each time a company reveals a contact on a listing (the first, paid opening or a later free one).
+ * Used for change notifications and anti-collection signals; anonymised after the retention period.
+ */
+export interface ContactOpening {
+  id: Id;
+  /** null once anonymised. */
+  viewerId: Id | null;
+  ownerId: Id;
+  listingId: Id;
+  at: IsoDate;
+  /** This opening created the contact access (and was paid for, unless free). */
+  createdAccess: boolean;
+  /** Opened from the listing card (false = direct request without viewing the card). */
+  viaCard: boolean;
+  anonymizedAt?: IsoDate;
+}
+
+/** One edit of a listing: visible history (TZ: "Change after a contact was opened"). */
+export interface ListingChange {
+  id: Id;
+  listingId: Id;
+  at: IsoDate;
+  fields: { field: string; before: string; after: string }[];
+  /** Route, dates, body, weight or rate changed. */
+  key: boolean;
 }
 
 export interface ContactPackage {
@@ -331,7 +382,10 @@ export type NotificationType =
   | 'inactivity_warning'
   | 'flag_set'
   | 'flag_escalated'
-  | 'dispute_resolved';
+  | 'dispute_resolved'
+  | 'listing_changed'
+  | 'collection_slowed'
+  | 'collection_blocked';
 
 export interface Notification {
   id: Id;
@@ -392,7 +446,13 @@ export type EventType =
   | 'data_reset'
   | 'dispute_opened'
   | 'dispute_resolved'
-  | 'profile_updated';
+  | 'profile_updated'
+  | 'listing_edited'
+  | 'contact_collection'
+  | 'consent_changed'
+  | 'account_deleted'
+  | 'data_exported'
+  | 'openings_anonymized';
 
 export interface ComponentChange {
   key: RatingComponentKey;
@@ -436,6 +496,8 @@ export interface AppState {
   companies: Company[];
   listings: Listing[];
   contactAccesses: ContactAccess[];
+  contactOpenings: ContactOpening[];
+  listingChanges: ListingChange[];
   transactions: LedgerTransaction[];
   packages: ContactPackage[];
   reviews: Review[];
