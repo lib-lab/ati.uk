@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { loginAs } from '../../domain/commands/session';
 import { balanceOf } from '../../domain/rules/ledger';
@@ -10,9 +11,8 @@ export function TopBar() {
   const state = useAppState((s) => s);
   const actor = state.companies.find((c) => c.id === state.actorId);
 
-  const onReset = () => {
-    if (window.confirm(t('topbar.resetConfirm'))) store.reset();
-  };
+  // In-page confirmation: window.confirm() is not available in every host (e.g. embedded previews).
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   return (
     <header className="topbar">
@@ -42,9 +42,27 @@ export function TopBar() {
         <span className="small">
           <span className="muted">{t('topbar.today')}</span> {formatDateTime(state.now)} UTC
         </span>
-        <button className="btn btn-ghost" onClick={onReset}>
-          {t('topbar.reset')}
-        </button>
+        {confirmingReset ? (
+          <span className="inline small">
+            {t('topbar.resetConfirm')}
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                store.reset();
+                setConfirmingReset(false);
+              }}
+            >
+              {t('topbar.resetYes')}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setConfirmingReset(false)}>
+              {t('topbar.resetCancel')}
+            </button>
+          </span>
+        ) : (
+          <button className="btn btn-ghost" onClick={() => setConfirmingReset(true)}>
+            {t('topbar.reset')}
+          </button>
+        )}
       </div>
     </header>
   );

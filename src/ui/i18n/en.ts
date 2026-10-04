@@ -8,7 +8,9 @@ export const en = {
   'topbar.actingAs': 'Acting as',
   'topbar.today': 'Today',
   'topbar.reset': 'Reset data',
-  'topbar.resetConfirm': 'Reset all data to the initial seed? Everything you changed will be lost.',
+  'topbar.resetConfirm': 'Reset all data to the initial seed?',
+  'topbar.resetYes': 'Reset',
+  'topbar.resetCancel': 'Cancel',
   'topbar.balance': 'Balance',
 
   'role.shipper': 'Shipper',
