@@ -7,93 +7,148 @@
  * only numbers allowed in media queries: mobile 640px, card layout 760px.
  */
 :root {
-  /* colours. Text pairs meet WCAG AA (4.5:1) on every background they are used on;
-     control borders meet 3:1 against the page (see DECISIONS "Visual polish"). */
-  --bg: #ffffff;
-  --bg-subtle: #f7f7f8;
-  --text: #18181b;
-  --muted: #626a76;
-  --border: #e4e4e7;
-  --border-control: #8d9199;
-  --accent: #2563eb;
-  --accent-bg: #eff4ff;
-  --accent-border: #c7d7fe;
-  --on-accent: #fff;
-  --red: #b91c1c;
-  --red-bg: #fef2f2;
-  --red-border: #fecaca;
-  --yellow: #92400e;
-  --yellow-bg: #fffbeb;
-  --yellow-border: #fde68a;
-  --neutral-bg: #f4f4f5;
+  color-scheme: light dark;
 
-  /* typography: five sizes */
+  /* ---- colour: surfaces and text (light theme) ---- */
+  --bg: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --text: #1c1f24;
+  --muted: #5d6470; /* secondary text */
+  --border: #e3e5e9; /* panels, cards, tables: thin and quiet */
+  --border-row: #d5d8de; /* separators between result rows: a bit more visible */
+  --border-control: #8a909a; /* fields and toggles: 3:1 against the page */
+
+  /* ---- colour: meaning. Each family: light fill, dark text of the same hue, border ---- */
+  /* accent: main actions and links (one accent) */
+  --accent: #2458d3;
+  --accent-text: #2458d3;
+  --accent-bg: #edf2fd;
+  --accent-border: #c3d3f6;
+  --on-accent: #ffffff;
+  /* success: verified, done */
+  --success-text: #1d6b40;
+  --success-bg: #e9f6ee;
+  --success-border: #bfe2cc;
+  /* warning: yellow flag, "clarify" */
+  --warning-text: #7a4f00;
+  --warning-bg: #fdf5df;
+  --warning-border: #efd89a;
+  /* danger: red flag, errors, destructive actions */
+  --danger: #b42318;
+  --danger-text: #a3201a;
+  --danger-bg: #fdeeed;
+  --danger-border: #f3c6c2;
+  /* neutral: service marks, counters, notes */
+  --neutral-text: #4a515c;
+  --neutral-bg: #f1f2f4;
+  --neutral-border: #dfe1e6;
+
+  /* ---- typography: two weights, five sizes ---- */
   --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-size-caption: 12px; /* labels, hints, badges, table heads, compact controls */
-  --font-size-body: 14px;
-  --font-size-subtitle: 16px; /* h2 */
-  --font-size-title: 20px; /* h1, big numbers, score */
+  --font-size-caption: 13px; /* secondary text: labels, hints, badges, table heads */
+  --font-size-body: 15px;
+  --font-size-subtitle: 17px; /* h2 */
+  --font-size-title: 22px; /* h1, big numbers, score */
   --font-size-display: 28px; /* score in the profile */
-  --line-height: 1.45;
+  --line-height: 1.5;
   --line-height-tight: 1;
-  --font-weight-medium: 500;
+  --font-weight-regular: 400;
   --font-weight-bold: 600;
-  --letter-spacing-caps: 0.05em;
   --letter-spacing-stars: 1px;
 
-  /* spacing: one short scale */
-  --space-2xs: 2px; /* inside badges and scores */
+  /* ---- spacing: 4 / 8 / 12 / 16 / 24 / 32 / 48 only ---- */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
   --space-lg: 16px;
   --space-xl: 24px;
   --space-2xl: 32px;
+  --space-3xl: 48px;
 
-  /* blocks: the same frame for panels, cards and lists */
-  --block-padding-y: var(--space-md);
-  --block-padding-x: var(--space-lg);
-  --row-padding-y: var(--space-sm);
-  --row-padding-x: var(--space-md);
-  --cell-padding-y: var(--space-sm);
-  --cell-padding-x: var(--space-md);
+  /* blocks: cards and panels 16–24 inside, 24–32 between */
+  --block-padding-y: var(--space-lg);
+  --block-padding-x: var(--space-xl);
+  --block-gap: var(--space-xl);
+  --section-gap: var(--space-2xl);
+  --row-padding-y: var(--space-md);
+  --row-padding-x: var(--space-lg);
+  --cell-padding-y: var(--space-md);
+  --cell-padding-x: var(--space-lg);
 
-  /* borders and radii */
+  /* ---- borders and radii ---- */
   --border-width: 1px;
   --border-width-thick: 2px;
   --radius: 8px;
   --radius-lg: 12px;
   --radius-pill: 999px;
 
-  /* controls: one height per row size */
-  --control-height: 32px;
-  --control-height-compact: 26px;
-  --control-padding-x: var(--space-sm);
-  --button-padding-x: var(--space-md);
-  --button-compact-padding-x: var(--space-sm);
-  --textarea-padding-y: var(--space-xs);
+  /* ---- controls: buttons and fields at least 40 px (44 px on phones) ---- */
+  --control-height: 40px;
+  --control-padding-x: var(--space-md);
+  --button-padding-x: var(--space-lg);
+  --textarea-padding-y: var(--space-sm);
   --textarea-rows: 2;
   --textarea-rows-tall: 12;
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
 
-  /* widths */
-  --page-max-width: 1200px;
-  --form-max-width: 900px;
+  /* ---- widths ---- */
+  --page-max-width: 1120px; /* lines do not stretch over a wide screen */
+  --form-max-width: 880px;
   --narrow-form-max-width: 640px;
-  --card-side-width: 340px;
+  --card-side-width: 360px;
   --field-min-width: 200px;
-  --input-narrow-width: 72px;
-  --input-date-width: 140px;
-  --score-min-width: 32px;
-  --counter-min-width: 18px;
+  --input-narrow-width: 80px;
+  --input-date-width: 160px;
+  --score-min-width: 36px;
+  --counter-min-width: 20px;
   --component-weight-width: 48px;
   --component-weight-width-mobile: 40px;
   --component-bar-width: 160px;
   --component-value-width: 120px;
 
-  /* states */
+  /* ---- states ---- */
   --opacity-hover: 0.9;
   --opacity-disabled: 0.5;
+}
+
+/* Phones: larger touch targets, tighter blocks. */
+@media (max-width: 640px) {
+  :root {
+    --control-height: 44px;
+    --block-padding-x: var(--space-lg);
+  }
+}
+
+/* Dark theme: the same families, dark fills and light text of the same hue. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171b;
+    --bg-subtle: #1c1f24;
+    --text: #e7e9ec;
+    --muted: #a0a7b2;
+    --border: #2c3037;
+    --border-row: #383d45;
+    --border-control: #6b727d;
+
+    --accent: #2f62d8;
+    --accent-text: #8fb0ff;
+    --accent-bg: #1b2747;
+    --accent-border: #2f4478;
+    --on-accent: #ffffff;
+    --success-text: #8fd3a9;
+    --success-bg: #14301f;
+    --success-border: #24563a;
+    --warning-text: #f0c869;
+    --warning-bg: #352a0f;
+    --warning-border: #5f4a19;
+    --danger: #c53a30;
+    --danger-text: #f4a7a1;
+    --danger-bg: #3a1a19;
+    --danger-border: #6a2c29;
+    --neutral-text: #c1c6ce;
+    --neutral-bg: #262a30;
+    --neutral-border: #3a3f47;
+  }
 }
