@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { saveSubscription } from '../../domain/commands/subscriptions';
+import { normalizeFilters } from '../../domain/rules/subscriptions';
 import { CITIES } from '../../domain/geo/cities';
 import { countVisible, hasPriority, searchListings } from '../../domain/rules/search';
 import type { BodyType, ListingKind, LoadingMethod, SearchFilters, SortKey, SubscriptionFrequency } from '../../domain/types';
@@ -41,6 +42,9 @@ export function SearchPage() {
   const totalOfKind = countVisible(state, filters.kind, state.now);
 
   const set = (patch: Partial<SearchFilters>) => setFilters((f) => ({ ...f, ...patch }));
+  // On narrow screens the filters fold behind one button (see styles: .filters.collapsed).
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilters = Object.keys(normalizeFilters(filters)).filter((k) => k !== 'kind' && !k.endsWith('RadiusKm')).length;
   const weightLabel = filters.kind === 'cargo' ? t('search.weight') : t('search.capacity');
 
   return (
@@ -53,7 +57,10 @@ export function SearchPage() {
         ))}
       </div>
 
-      <div className="filters">
+      <button type="button" className="btn btn-ghost filters-toggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((x) => !x)}>
+        {t('search.filtersToggle', { count: activeFilters })} {filtersOpen ? '▴' : '▾'}
+      </button>
+      <div className={filtersOpen ? 'filters' : 'filters collapsed'}>
         <CityFilter id="from" label={t('search.from')} cityId={filters.fromCityId} radius={filters.fromRadiusKm}
           onChange={(cityId, radius) => set({ fromCityId: cityId, fromRadiusKm: radius })} />
         <CityFilter id="to" label={t('search.to')} cityId={filters.toCityId} radius={filters.toRadiusKm}

@@ -85,6 +85,7 @@ export const en = {
   'search.min': 'from',
   'search.max': 'to',
   'search.clear': 'Clear filters',
+  'search.filtersToggle': 'Filters ({count})',
   'search.found': '{count} found',
   'search.sortBy': 'Sort by',
   'search.priorityFirst': 'priority listings always first',
@@ -716,6 +717,9 @@ export const en = {
 
   // ----- personal data -----
   'nav.account': 'Account',
+  'theme.dark': 'Dark theme',
+  'theme.toDark': 'Switch to the dark theme',
+  'theme.toLight': 'Switch to the light theme',
   'time.plusHour': '+1 hour',
   'rep.noPersonalData': 'Do not write names or phone numbers of people: reviews and claims are public. Name the company only.',
   'company.review.textHidden': 'Text hidden on {date} at the request of a former user. The rating stays.',

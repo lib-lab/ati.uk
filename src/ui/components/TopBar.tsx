@@ -14,6 +14,7 @@ import { store, useAppState } from '../../store/store';
 import { formatDate, formatDateTime, formatMoney } from '../format';
 import { t } from '../i18n';
 import { APP_TIME_PROCESSES } from '../timeProcesses';
+import { ThemeSwitch } from './ThemeSwitch';
 
 const SHIFTS: { key: string; to: (now: IsoDate) => IsoDate }[] = [
   { key: 'time.plusHour', to: (now) => addHours(now, 1) },
@@ -110,6 +111,7 @@ export function TopBar() {
           ) : (
             <span className="muted">{t('role.moderator')}</span>
           )}
+          <ThemeSwitch />
         </div>
       </div>
 

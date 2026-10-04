@@ -1,94 +1,176 @@
 /*
  * Design tokens. The only place with raw values for styles: sizes, colours, weights.
  * Components and styles.css use var(--…) only (see CLAUDE.md "Design").
- * The spacing scale mirrors the values used today; "Visual polish" (ROADMAP) will reduce it.
+ * Names say what a token is for, not its value.
  *
  * Breakpoints cannot be CSS variables inside @media, so they are fixed here and are the
  * only numbers allowed in media queries: mobile 640px, card layout 760px.
  */
 :root {
-  /* colours */
-  --bg: #ffffff;
-  --bg-subtle: #f7f7f8;
-  --text: #18181b;
-  --muted: #6b7280;
-  --border: #e4e4e7;
-  --accent: #2563eb;
-  --accent-bg: #eff4ff;
-  --accent-border: #c7d7fe;
-  --on-accent: #fff;
-  --red: #b91c1c;
-  --red-bg: #fef2f2;
-  --red-border: #fecaca;
-  --yellow: #92400e;
-  --yellow-bg: #fffbeb;
-  --yellow-border: #fde68a;
-  --neutral-bg: #f4f4f5;
+  color-scheme: light;
 
-  /* typography */
+  /* ---- colour: surfaces and text (light theme) ---- */
+  --bg: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --text: #1c1f24;
+  --muted: #5d6470; /* secondary text */
+  --border: #e3e5e9; /* panels, cards, tables: thin and quiet */
+  --border-row: #d5d8de; /* separators between result rows: a bit more visible */
+  --border-control: #8a909a; /* fields and toggles: 3:1 against the page */
+
+  /* ---- colour: meaning. Each family: light fill, dark text of the same hue, border ---- */
+  /* accent: main actions and links (one accent) */
+  --accent: #2458d3;
+  --accent-text: #2458d3;
+  --accent-bg: #edf2fd;
+  --accent-border: #c3d3f6;
+  --on-accent: #ffffff;
+  /* success: verified, done */
+  --success-text: #1d6b40;
+  --success-bg: #e9f6ee;
+  --success-border: #bfe2cc;
+  /* warning: yellow flag, "clarify" */
+  --warning-text: #7a4f00;
+  --warning-bg: #fdf5df;
+  --warning-border: #efd89a;
+  /* danger: red flag, errors, destructive actions */
+  --danger: #b42318;
+  --danger-text: #a3201a;
+  --danger-bg: #fdeeed;
+  --danger-border: #f3c6c2;
+  /* neutral: service marks, counters, notes */
+  --neutral-text: #4a515c;
+  --neutral-bg: #f1f2f4;
+  --neutral-border: #dfe1e6;
+  /* theme switch: the sun lights up in the light theme, the moon in the dark one */
+  --switch-track: #d7dde5;
+  --switch-track-on: #3a4150;
+  --switch-knob: #ffffff;
+  --icon-sun: #b7700a;
+  --icon-moon: #c9d6ff;
+
+  /* ---- typography: two weights, five sizes ---- */
   --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-size-xs: 11px; /* toolbar label, counters */
-  --font-size-sm: 12px; /* hints, badges, table heads, field labels */
-  --font-size-md: 13px; /* toolbar, small buttons, alerts, chips */
-  --font-size-base: 14px;
-  --font-size-h2: 16px;
-  --font-size-lg: 18px; /* score button */
-  --font-size-xl: 20px; /* h1, big numbers, star input */
-  --font-size-xxl: 28px; /* score in the profile */
-  --line-height: 1.45;
+  --font-size-caption: 13px; /* secondary text: labels, hints, badges, table heads */
+  --font-size-body: 15px;
+  --font-size-subtitle: 17px; /* h2 */
+  --font-size-title: 22px; /* h1, big numbers, score */
+  --font-size-display: 28px; /* score in the profile */
+  --line-height: 1.5;
   --line-height-tight: 1;
-  --font-weight-medium: 500;
+  --font-weight-regular: 400;
   --font-weight-bold: 600;
-  --letter-spacing-caps: 0.05em;
   --letter-spacing-stars: 1px;
 
-  /* spacing */
-  --space-1: 1px;
-  --space-2: 2px;
-  --space-3: 3px;
-  --space-4: 4px;
-  --space-5: 5px;
-  --space-6: 6px;
-  --space-8: 8px;
-  --space-10: 10px;
-  --space-12: 12px;
-  --space-14: 14px;
-  --space-16: 16px;
-  --space-24: 24px;
-  --space-40: 40px;
+  /* ---- spacing: 4 / 8 / 12 / 16 / 24 / 32 / 48 only ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
 
-  /* borders and radii */
+  /* blocks: cards and panels 16–24 inside, 24–32 between */
+  --block-padding-y: var(--space-lg);
+  --block-padding-x: var(--space-xl);
+  --block-gap: var(--space-xl);
+  --section-gap: var(--space-2xl);
+  --row-padding-y: var(--space-md);
+  --row-padding-x: var(--space-lg);
+  --cell-padding-y: var(--space-md);
+  --cell-padding-x: var(--space-lg);
+
+  /* ---- borders and radii ---- */
   --border-width: 1px;
   --border-width-thick: 2px;
   --radius: 8px;
   --radius-lg: 12px;
   --radius-pill: 999px;
 
-  /* controls: height comes from font size, line height and these paddings */
-  --control-padding-y: var(--space-4);
-  --control-padding-x: var(--space-8);
-  --button-padding-x: var(--space-10);
-  --button-small-padding-y: var(--space-2);
+  /* ---- controls: buttons and fields at least 40 px (44 px on phones) ---- */
+  --control-height: 40px;
+  --control-padding-x: var(--space-md);
+  --button-padding-x: var(--space-lg);
+  --textarea-padding-y: var(--space-sm);
   --textarea-rows: 2;
   --textarea-rows-tall: 12;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
-  /* widths */
-  --page-max-width: 1200px;
-  --form-max-width: 900px;
+  /* ---- widths ---- */
+  --page-max-width: 1120px; /* lines do not stretch over a wide screen */
+  --form-max-width: 880px;
   --narrow-form-max-width: 640px;
-  --card-side-width: 340px;
+  --card-side-width: 360px;
   --field-min-width: 200px;
-  --input-narrow-width: 72px;
-  --input-date-width: 140px;
-  --score-min-width: 32px;
-  --counter-min-width: 18px;
+  --input-narrow-width: 80px;
+  --input-date-width: 160px;
+  --score-min-width: 36px;
+  --counter-min-width: 20px;
   --component-weight-width: 48px;
   --component-weight-width-mobile: 40px;
   --component-bar-width: 160px;
   --component-value-width: 120px;
 
-  /* states */
+  /* ---- theme switch ---- */
+  --switch-width: 44px;
+  --switch-height: 24px;
+  --switch-knob-size: 18px;
+  --switch-inset: 3px; /* knob to track edge */
+  --icon-size: 20px;
+  --icon-stroke: 2;
+  --transition-fast: 150ms;
+
+  /* ---- states ---- */
   --opacity-hover: 0.9;
   --opacity-disabled: 0.5;
 }
+
+/* Phones: larger touch targets, tighter blocks. */
+@media (max-width: 640px) {
+  :root {
+    --control-height: 44px;
+    --block-padding-x: var(--space-lg);
+  }
+}
+
+/*
+ * Dark theme: the same families, dark fills and light text of the same hue.
+ * Switched by data-theme on <html> (see ui/theme.ts): the viewer's choice, at first the system setting.
+ */
+:root[data-theme='dark'] {
+  --bg: #15171b;
+  --bg-subtle: #1c1f24;
+  --text: #e7e9ec;
+  --muted: #a0a7b2;
+  --border: #2c3037;
+  --border-row: #383d45;
+  --border-control: #6b727d;
+
+  --accent: #2f62d8;
+  --accent-text: #8fb0ff;
+  --accent-bg: #1b2747;
+  --accent-border: #2f4478;
+  --on-accent: #ffffff;
+  --success-text: #8fd3a9;
+  --success-bg: #14301f;
+  --success-border: #24563a;
+  --warning-text: #f0c869;
+  --warning-bg: #352a0f;
+  --warning-border: #5f4a19;
+  --danger: #c53a30;
+  --danger-text: #f4a7a1;
+  --danger-bg: #3a1a19;
+  --danger-border: #6a2c29;
+  --neutral-text: #c1c6ce;
+  --neutral-bg: #262a30;
+  --neutral-border: #3a3f47;
+  --switch-track: #3a4150;
+  --switch-track-on: #2f62d8;
+  --switch-knob: #ffffff;
+  --icon-sun: #d9a441;
+  --icon-moon: #c9d6ff;
+}
+:root[data-theme='dark'] { color-scheme: dark; }
