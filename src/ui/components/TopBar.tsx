@@ -14,7 +14,7 @@ import { store, useAppState } from '../../store/store';
 import { formatDate, formatDateTime, formatMoney } from '../format';
 import { t } from '../i18n';
 import { APP_TIME_PROCESSES } from '../timeProcesses';
-import { chooseTheme, initialTheme, type Theme } from '../theme';
+import { ThemeSwitch } from './ThemeSwitch';
 
 const SHIFTS: { key: string; to: (now: IsoDate) => IsoDate }[] = [
   { key: 'time.plusHour', to: (now) => addHours(now, 1) },
@@ -60,7 +60,6 @@ export function TopBar() {
   const [bot, setBot] = useState<{ actorId: string; text: string } | null>(null);
   // On narrow screens the test tools collapse into one line (see styles: .toolbar.collapsed).
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [theme, setTheme] = useState<Theme>(initialTheme);
 
   return (
     <header>
@@ -112,10 +111,7 @@ export function TopBar() {
           ) : (
             <span className="muted">{t('role.moderator')}</span>
           )}
-          <button type="button" id="theme" className="btn btn-ghost btn-small" role="switch" aria-checked={theme === 'dark'}
-            onClick={() => { const next: Theme = theme === 'dark' ? 'light' : 'dark'; setTheme(next); chooseTheme(next); }}>
-            {theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
-          </button>
+          <ThemeSwitch />
         </div>
       </div>
 

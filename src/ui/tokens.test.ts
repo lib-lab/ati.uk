@@ -87,6 +87,8 @@ describe('design tokens', () => {
       ];
       expect(text.map(([fg, bg]) => [fg, bg, Number(ratio(fg, bg).toFixed(2))]).filter(([, , r]) => (r as number) < 4.5)).toEqual([]);
       expect(ratio('border-control', 'bg')).toBeGreaterThanOrEqual(3);
+      // the lit icon of the theme switch (graphics: 3:1)
+      expect(ratio(theme === 'light' ? 'icon-sun' : 'icon-moon', 'bg')).toBeGreaterThanOrEqual(3);
     });
   }
 });
