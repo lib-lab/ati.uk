@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CITIES } from '../../domain/geo/cities';
 import { countVisible, hasPriority, searchListings } from '../../domain/rules/search';
-import type { BodyType, ListingKind, SearchFilters } from '../../domain/types';
+import type { BodyType, ListingKind, LoadingMethod, SearchFilters, SortKey } from '../../domain/types';
 import { useAppState } from '../../store/store';
 import { MarkBadges, ScoreChip } from '../components/OwnerSummary';
 import { t } from '../i18n';
@@ -10,22 +10,34 @@ import { bodyText, dateText, distanceKm, fromName, ratePerKmText, rateText, toNa
 import { getCompany, getRating } from '../selectors';
 
 const BODY_TYPES: BodyType[] = ['tent', 'box', 'reefer', 'flatbed', 'tanker', 'container', 'tipper'];
+const LOADING: LoadingMethod[] = ['top', 'side', 'rear'];
+const SORTS: SortKey[] = ['loading_date', 'rate_per_km', 'rating', 'freshness'];
 const CITY_OPTIONS = [...CITIES].sort((a, b) => a.name.localeCompare(b.name));
+
+const num = (v: string) => (v === '' ? undefined : Number(v));
+const dateIn = (v: string) => (v === '' ? undefined : `${v}T00:00:00.000Z`);
+const dateOut = (iso?: string) => (iso ? iso.slice(0, 10) : '');
+
+function toggle<T>(list: T[] | undefined, item: T): T[] {
+  const current = list ?? [];
+  return current.includes(item) ? current.filter((x) => x !== item) : [...current, item];
+}
 
 export function SearchPage() {
   const state = useAppState((s) => s);
   const navigate = useNavigate();
   const actor = getCompany(state, state.actorId);
   const [filters, setFilters] = useState<SearchFilters>({ kind: actor?.role === 'shipper' ? 'truck' : 'cargo' });
-  const results = useMemo(() => searchListings(state, filters, state.now), [state, filters]);
+  const [sort, setSort] = useState<SortKey>('loading_date');
+  const ratingOf = (id: string) => getRating(state, id);
+  const results = useMemo(
+    () => searchListings(state, filters, state.now, { sort, ratingOf: (id) => getRating(state, id) }),
+    [state, filters, sort],
+  );
   const totalOfKind = countVisible(state, filters.kind, state.now);
 
   const set = (patch: Partial<SearchFilters>) => setFilters((f) => ({ ...f, ...patch }));
-  const num = (v: string) => (v === '' ? undefined : Number(v));
-  const toggleBody = (b: BodyType) => {
-    const current = filters.bodyTypes ?? [];
-    set({ bodyTypes: current.includes(b) ? current.filter((x) => x !== b) : [...current, b] });
-  };
+  const weightLabel = filters.kind === 'cargo' ? t('search.weight') : t('search.capacity');
 
   return (
     <section>
@@ -38,50 +50,67 @@ export function SearchPage() {
       </div>
 
       <div className="filters">
+        <CityFilter id="from" label={t('search.from')} cityId={filters.fromCityId} radius={filters.fromRadiusKm}
+          onChange={(cityId, radius) => set({ fromCityId: cityId, fromRadiusKm: radius })} />
+        <CityFilter id="to" label={t('search.to')} cityId={filters.toCityId} radius={filters.toRadiusKm}
+          onChange={(cityId, radius) => set({ toCityId: cityId, toRadiusKm: radius })} />
         <label>
-          <span>{t('search.from')}</span>
-          <select id="f-from" value={filters.fromCityId ?? ''} onChange={(e) => set({ fromCityId: e.target.value || undefined })}>
-            <option value="">{t('search.anyCity')}</option>
-            {CITY_OPTIONS.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}, {c.country}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>{t('search.to')}</span>
-          <select id="f-to" value={filters.toCityId ?? ''} onChange={(e) => set({ toCityId: e.target.value || undefined })}>
-            <option value="">{t('search.anyCity')}</option>
-            {CITY_OPTIONS.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}, {c.country}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>{filters.kind === 'cargo' ? t('search.weight') : t('search.capacity')}</span>
+          <span>{filters.kind === 'cargo' ? t('search.loadingDate') : t('search.availableDate')}</span>
           <span className="inline">
-            <input id="f-wmin" type="number" min={0} step={0.5} placeholder={t('search.min')} value={filters.weightMin ?? ''} onChange={(e) => set({ weightMin: num(e.target.value) })} />
-            <input id="f-wmax" type="number" min={0} step={0.5} placeholder={t('search.max')} value={filters.weightMax ?? ''} onChange={(e) => set({ weightMax: num(e.target.value) })} />
+            <input id="f-dfrom" type="date" value={dateOut(filters.dateFrom)} onChange={(e) => set({ dateFrom: dateIn(e.target.value) })} />
+            <input id="f-dto" type="date" value={dateOut(filters.dateTo)} onChange={(e) => set({ dateTo: dateIn(e.target.value) })} />
           </span>
         </label>
+        <RangeFilter id="w" label={weightLabel} min={filters.weightMin} max={filters.weightMax}
+          onChange={(min, max) => set({ weightMin: min, weightMax: max })} />
+        <RangeFilter id="v" label={t('search.volume')} min={filters.volumeMin} max={filters.volumeMax}
+          onChange={(min, max) => set({ volumeMin: min, volumeMax: max })} />
         <fieldset>
           <legend>{t('search.body')}</legend>
           <div className="chips">
             {BODY_TYPES.map((b) => (
-              <label key={b} className={filters.bodyTypes?.includes(b) ? 'chip active' : 'chip'}>
-                <input type="checkbox" checked={filters.bodyTypes?.includes(b) ?? false} onChange={() => toggleBody(b)} />
+              <Chip key={b} active={filters.bodyTypes?.includes(b) ?? false} onToggle={() => set({ bodyTypes: toggle(filters.bodyTypes, b) })}>
                 {t(`body.${b}`)}
-              </label>
+              </Chip>
             ))}
           </div>
         </fieldset>
+        <fieldset>
+          <legend>{t('search.loading')}</legend>
+          <div className="chips">
+            {LOADING.map((m) => (
+              <Chip key={m} active={filters.loadingMethods?.includes(m) ?? false} onToggle={() => set({ loadingMethods: toggle(filters.loadingMethods, m) })}>
+                {t(`loading.${m}`)}
+              </Chip>
+            ))}
+          </div>
+        </fieldset>
+        <label>
+          <span>{t('search.minRating')}</span>
+          <input id="f-minrating" type="number" min={0} max={100} step={5} placeholder="0–100" value={filters.minRating ?? ''}
+            onChange={(e) => set({ minRating: num(e.target.value) })} />
+        </label>
+        <label className="checkbox">
+          <input id="f-nored" type="checkbox" checked={filters.noRedFlags ?? false} onChange={(e) => set({ noRedFlags: e.target.checked || undefined })} />
+          <span>{t('search.noRedFlags')}</span>
+        </label>
         <button className="btn btn-ghost" onClick={() => setFilters({ kind: filters.kind })}>
           {t('search.clear')}
         </button>
       </div>
 
-      <p className="muted small">
-        {t('search.found', { count: results.length })} · {t('search.sortNote')}
-      </p>
+      <div className="results-head">
+        <span className="muted small">{t('search.found', { count: results.length })}</span>
+        <label className="inline small">
+          <span className="muted">{t('search.sortBy')}</span>
+          <select id="f-sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+            {SORTS.map((k) => (
+              <option key={k} value={k}>{t(`sort.${k}`)}</option>
+            ))}
+          </select>
+          <span className="muted">{t('search.priorityFirst')}</span>
+        </label>
+      </div>
 
       {results.length === 0 ? (
         <div className="empty">
@@ -110,7 +139,7 @@ export function SearchPage() {
             <tbody>
               {results.map((l) => {
                 const owner = getCompany(state, l.ownerId)!;
-                const rating = getRating(state, owner.id);
+                const rating = ratingOf(owner.id);
                 const km = distanceKm(l);
                 const perKm = ratePerKmText(l);
                 return (
@@ -127,7 +156,10 @@ export function SearchPage() {
                     </td>
                     <td className="nowrap">{dateText(l)}</td>
                     <td>{bodyText(l)}</td>
-                    <td className="num nowrap">{l.weightT} t</td>
+                    <td className="num nowrap">
+                      {l.weightT} t
+                      {l.volumeM3 !== undefined && <div className="muted small">{l.volumeM3} m³</div>}
+                    </td>
                     <td className="num nowrap">
                       {rateText(l)}
                       {perKm && <div className="muted small">{perKm}</div>}
@@ -149,5 +181,46 @@ export function SearchPage() {
         </div>
       )}
     </section>
+  );
+}
+
+function CityFilter(props: { id: string; label: string; cityId?: string; radius?: number; onChange: (cityId?: string, radius?: number) => void }) {
+  return (
+    <label>
+      <span>{props.label}</span>
+      <span className="inline">
+        <select id={`f-${props.id}`} value={props.cityId ?? ''} onChange={(e) => props.onChange(e.target.value || undefined, props.radius)}>
+          <option value="">{t('search.anyCity')}</option>
+          {CITY_OPTIONS.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}, {c.country}</option>
+          ))}
+        </select>
+        <input id={`f-${props.id}-radius`} type="number" min={0} step={50} placeholder={t('search.radius')} className="narrow"
+          disabled={!props.cityId} value={props.radius ?? ''} onChange={(e) => props.onChange(props.cityId, num(e.target.value))} />
+      </span>
+    </label>
+  );
+}
+
+function RangeFilter(props: { id: string; label: string; min?: number; max?: number; onChange: (min?: number, max?: number) => void }) {
+  return (
+    <label>
+      <span>{props.label}</span>
+      <span className="inline">
+        <input id={`f-${props.id}min`} type="number" min={0} step={0.5} placeholder={t('search.min')} value={props.min ?? ''}
+          onChange={(e) => props.onChange(num(e.target.value), props.max)} />
+        <input id={`f-${props.id}max`} type="number" min={0} step={0.5} placeholder={t('search.max')} value={props.max ?? ''}
+          onChange={(e) => props.onChange(props.min, num(e.target.value))} />
+      </span>
+    </label>
+  );
+}
+
+function Chip(props: { active: boolean; onToggle: () => void; children: React.ReactNode }) {
+  return (
+    <label className={props.active ? 'chip active' : 'chip'}>
+      <input type="checkbox" checked={props.active} onChange={props.onToggle} />
+      {props.children}
+    </label>
   );
 }

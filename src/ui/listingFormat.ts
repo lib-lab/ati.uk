@@ -1,6 +1,7 @@
 // Display helpers for listings.
 import { getCity } from '../domain/geo/cities';
 import { roadDistanceKm } from '../domain/geo/distance';
+import { ratePerKm } from '../domain/rules/search';
 import type { Listing } from '../domain/types';
 import { formatDate, formatMoney } from './format';
 import { t } from './i18n';
@@ -29,9 +30,8 @@ export function rateText(l: Listing): string {
 }
 
 export function ratePerKmText(l: Listing): string | null {
-  const km = distanceKm(l);
-  if (l.rate.mode !== 'fixed' || l.rate.amount === undefined || !km) return null;
-  return t('rate.perKm', { amount: formatMoney(Math.round(l.rate.amount / km), l.rate.currency) });
+  const perKm = ratePerKm(l);
+  return perKm === null ? null : t('rate.perKm', { amount: formatMoney(Math.round(perKm), l.rate.currency) });
 }
 
 export function bodyText(l: Listing): string {

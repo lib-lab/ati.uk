@@ -31,7 +31,7 @@ a:hover { text-decoration: underline; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
-.inline { display: inline-flex; align-items: center; gap: 6px; }
+.inline { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 
 .topbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
@@ -147,3 +147,9 @@ select, input {
 .stats { display: flex; flex-wrap: wrap; gap: 16px 40px; margin-top: 12px; }
 .big { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .positive { color: var(--accent); }
+
+/* ---- search E4 ---- */
+.filters input.narrow { width: 72px; }
+.filters input[type='date'] { width: 140px; }
+.filters label.checkbox { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 13px; padding-bottom: 4px; }
+.results-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: 8px 0; }
