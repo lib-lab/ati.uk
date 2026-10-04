@@ -1,4 +1,30 @@
-/* Styles of the published documents (dist/docs). The palette follows the app; light and dark theme. */
+// Publishes the tester guide with the site: docs/OVERVIEW.md → dist/guide.html (https://<site>/guide).
+// Only the guide is public; sections for the team and links to repository documents are left out.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { marked } from 'marked';
+
+/** Sections of OVERVIEW.md that stay in the repository only. */
+const TEAM_ONLY = ['Покрытие ТЗ', 'Что дальше, по важности', 'Где что лежит'];
+
+const md = readFileSync('docs/OVERVIEW.md', 'utf8')
+  .split(/^(?=## )/m)
+  .filter((part) => !TEAM_ONLY.some((title) => part.startsWith(`## ${title}`)))
+  .join('');
+const body = marked
+  .parse(md)
+  // links to repository files are not public: keep the text only
+  .replace(/<a href="(?!https?:)[^"]*">([^<]*)<\/a>/g, '$1')
+  .replace(/<p>Что проверить:/g, '<p class="check"><strong>Что проверить:</strong>');
+
+writeFileSync('dist/guide.html', `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Руководство тестировщика · Freight board</title>
+<script>try { const t = localStorage.getItem('freight-board-prototype/theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<style>
 :root {
   color-scheme: light;
   --bg: #ffffff; --bg-subtle: #f6f7f9; --text: #1c1f24; --muted: #5d6470; --border: #e3e5e9;
@@ -44,12 +70,18 @@ th, td { text-align: left; vertical-align: top; padding: 8px 12px; border: 1px s
 th { background: var(--bg-subtle); font-weight: 600; }
 img { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
 .check { background: var(--check-bg); color: var(--check-text); border: 1px solid var(--check-border); border-radius: 10px; padding: 12px 16px; }
-.docs { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.docs li { display: flex; flex-direction: column; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; }
-.docs span { color: var(--muted); font-size: 15px; }
 @media (max-width: 640px) {
   .bar { padding: 12px 16px; }
   .bar .app { margin-left: 0; }
   main { padding: 24px 16px 48px; }
   h1 { font-size: 26px; }
 }
+</style>
+</head>
+<body>
+<header class="bar"><span class="brand">Руководство тестировщика</span><a class="app" href="/">Открыть прототип →</a></header>
+<main>${body}</main>
+</body>
+</html>
+`);
+console.log('guide: dist/guide.html');

@@ -14,7 +14,7 @@ npm install
 npm run dev            # http://localhost:5173
 npm test               # Vitest, все тесты
 npx tsc --noEmit -p .  # проверка типов
-npm run build          # типы + сборка + документы (Markdown → dist/docs, см. scripts/build-docs.mjs)
+npm run build          # типы + сборка + руководство тестировщика (docs/OVERVIEW.md → dist/guide.html, см. scripts/build-guide.mjs)
 npm run build:preview  # dist/preview.html — один файл со встроенными CSS и JS для показа без сервера
 ```
 

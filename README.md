@@ -1,6 +1,6 @@
 # Freight board prototype
 
-> Прототип: https://ati-uk.pages.dev · документы: https://ati-uk.pages.dev/docs/
+> Прототип: https://ati-uk.pages.dev · руководство тестировщика: https://ati-uk.pages.dev/guide (единственный документ в открытом доступе)
 >
 > Обзор для тех, кто проверяет пользовательские пути и UX (без разработки): [docs/OVERVIEW.md](docs/OVERVIEW.md).
 
