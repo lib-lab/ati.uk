@@ -26,7 +26,7 @@ import { COMPANY_SPECS, type Archetype, type CompanySpec } from './companies';
 import { createRng, type Rng } from './random';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 

@@ -342,6 +342,22 @@ export type EventType =
   | 'time_shifted'
   | 'data_reset';
 
+export interface ComponentChange {
+  key: RatingComponentKey;
+  /** Component value 0..100 or null when unavailable. */
+  before: number | null;
+  after: number | null;
+  /** Change of the component's contribution to the score, in score points. */
+  contributionDelta: number;
+}
+
+export interface RatingChange {
+  before: number;
+  after: number;
+  /** Components whose value or availability changed. */
+  components: ComponentChange[];
+}
+
 export interface EventLogEntry {
   id: Id;
   at: IsoDate;
@@ -353,7 +369,7 @@ export interface EventLogEntry {
   reasonKey: string;
   params: Record<string, string | number>;
   /** Only for rating_changed. */
-  rating?: { before: number; after: number; component?: RatingComponentKey };
+  rating?: RatingChange;
 }
 
 // ---------- Whole state ----------

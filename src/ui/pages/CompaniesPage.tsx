@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { loginAs } from '../../domain/commands/session';
 import { activeFlags } from '../../domain/rules/flags';
 import { balanceOf } from '../../domain/rules/ledger';
@@ -33,7 +34,7 @@ export function CompaniesPage() {
             {state.companies.map((c) => (
               <tr key={c.id} className={c.id === state.actorId ? 'row-current' : undefined}>
                 <td>
-                  <div>{c.legalName}</div>
+                  <Link to={`/company/${c.id}`}>{c.legalName}</Link>
                   <div className="muted small">
                     {c.id} · {c.regNumberType} {c.regNumber}
                   </div>

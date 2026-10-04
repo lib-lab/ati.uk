@@ -1,5 +1,6 @@
 // "Open contact" with price, state messages and red-flag warning (TZ: listing card).
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { openContact } from '../../domain/commands/contacts';
 import { CONFIG } from '../../domain/config';
 import { decideContact, findAccess } from '../../domain/rules/contactAccess';
@@ -31,6 +32,7 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
         <ContactDetails state={state} listing={listing} />
         <p className="muted small">
           {decision.kind === 'own_listing' || !access ? t('contact.own') : t('contact.repeatNote', { date: formatDate(access.openedAt) })}
+          {decision.kind === 'own_listing' && <> <Link to="/my-listings">{t('contact.manage')}</Link></>}
         </p>
       </div>
     );
@@ -101,7 +103,7 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
         {blocked && (
           <>
             <br />
-            {t('contact.noFundsHint')}
+            {t('contact.noFundsHint')} <Link to="/balance">{t('contact.topUpLink')}</Link>
           </>
         )}
       </p>

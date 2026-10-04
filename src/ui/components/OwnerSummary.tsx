@@ -1,5 +1,6 @@
 // Score, primary mark, review count and "new member" label. Click the score for details.
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { primaryMark } from '../../domain/rules/rating';
 import type { Company, Rating } from '../../domain/types';
 import { t } from '../i18n';
@@ -39,7 +40,7 @@ export function OwnerSummary({ rating, company }: { rating: Rating; company: Com
           <ScoreChip rating={rating} />
         </button>
         <div className="owner-name">
-          <div>{company.legalName}</div>
+          <Link to={`/company/${company.id}`}>{company.legalName}</Link>
           <div className="muted small">
             {t(`role.${company.role}`)} · {company.country} · {t('owner.reviews', { count: rating.countedReviews })}
           </div>
@@ -52,9 +53,12 @@ export function OwnerSummary({ rating, company }: { rating: Rating; company: Com
           <FlagBadge key={f.id} flag={f} />
         ))}
       </div>
-      <button className="link-button small" onClick={() => setOpen((v) => !v)}>
-        {open ? t('owner.hideBreakdown') : t('owner.showBreakdown')}
-      </button>
+      <div className="inline small">
+        <button className="link-button" onClick={() => setOpen((v) => !v)}>
+          {open ? t('owner.hideBreakdown') : t('owner.showBreakdown')}
+        </button>
+        <Link to={`/company/${company.id}`} className="profile-link">{t('owner.profileLink')}</Link>
+      </div>
       {open && (
         <table className="breakdown">
           <tbody>

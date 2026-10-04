@@ -1,6 +1,7 @@
 // Small builders for unit tests. Not used by the app.
 import { CONFIG } from '../config';
 import { computeExpiresAt } from '../rules/lifetime';
+import type { ListingDraft } from '../rules/listingDraft';
 import { addDays } from '../time';
 import type { AppState, CargoListing, Company, IsoDate, Review } from '../types';
 
@@ -69,3 +70,20 @@ export function emptyState(overrides: Partial<AppState> = {}): AppState {
     templates: [], events: [], seq: 0, ...overrides,
   };
 }
+
+/** Complete cargo draft for owner "o" (contact person "o-p1"), loading in 2 days. */
+export const cargoDraft = (overrides: Partial<ListingDraft> = {}): ListingDraft => ({
+  kind: 'cargo',
+  contactPersonId: 'o-p1',
+  from: { cityId: 'warsaw' },
+  to: { cityId: 'berlin' },
+  dateFrom: addDays(NOW, 2),
+  bodyTypes: ['tent'],
+  weightT: 10,
+  loadingMethods: ['rear'],
+  rate: { mode: 'fixed', amount: 100000, currency: 'EUR' },
+  cargoName: 'Steel',
+  packaging: 'coils',
+  pieces: 4,
+  ...overrides,
+});
