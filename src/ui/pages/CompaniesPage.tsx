@@ -16,7 +16,7 @@ export function CompaniesPage() {
   return (
     <section>
       <h1>{t('companies.title')}</h1>
-      <p className="muted">{t('companies.hint')}</p>
+      <p className="muted">{t('companies.hint')} <Link to="/register">{t('companies.register')}</Link></p>
       <div className="table-wrap">
         <table className="table">
           <thead>

@@ -13,6 +13,7 @@ import { hasPriority } from '../rules/search';
 import { isBefore, startOfDay } from '../time';
 import type { AppState, Cents, Id, IsoDate, Listing, RemovalReason, RouteTemplate, TransactionType } from '../types';
 import type { CommandResult } from './result';
+import { notifySubscribers } from './subscriptions';
 import type { TimeProcess } from './time';
 
 /** "Warsaw → Berlin" for notifications and events. */
@@ -61,6 +62,7 @@ export function postListing(state: AppState, draft: ListingDraft): CommandResult
     params: { listing: id, route: routeLabel(listing) },
   });
   s = withRatingEvents(state, s, { reasonKey: 'event.rating.listingPosted', params: { listing: id }, actor: owner.id });
+  s = notifySubscribers(s, id);
   return { ok: true, state: s };
 }
 
@@ -212,6 +214,8 @@ export function editListing(state: AppState, listingId: Id, draft: ListingDraft)
       fields: fields.map((f) => f.field).join(', '),
     });
   }
+  // A key edit can make the listing match subscriptions it did not match before.
+  if (key) s = notifySubscribers(s, l.id);
   return { ok: true, state: s };
 }
 

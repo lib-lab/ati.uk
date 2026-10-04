@@ -15,5 +15,8 @@ describe('MockRegistry', () => {
     expect((await registry.lookup('PL', '1111111119'))?.status).toBe('liquidated');
     expect((await registry.lookup('PL', '1111111118'))?.legalName).toBe('Registry name differs Ltd');
     expect((await registry.lookup('PL', '1111111112'))?.status).toBe('active');
+    // unknown numbers echo the claimed name (a match), except 8
+    expect((await registry.lookup('PL', '1111111112', 'New Co'))?.legalName).toBe('New Co');
+    expect((await registry.lookup('PL', '1111111118', 'New Co'))?.legalName).toBe('Registry name differs Ltd');
   });
 });

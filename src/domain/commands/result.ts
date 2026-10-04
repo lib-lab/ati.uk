@@ -26,7 +26,11 @@ export type CommandError =
   | 'no_history'
   | 'refund_not_available'
   | 'account_deleted'
-  | 'confirmation_mismatch';
+  | 'confirmation_mismatch'
+  | 'subscription_exists'
+  | 'invalid_registration'
+  | 'consent_required'
+  | 'already_registered';
 
 /**
  * A failed command may still carry a state to keep (e.g. a failed human check is counted):

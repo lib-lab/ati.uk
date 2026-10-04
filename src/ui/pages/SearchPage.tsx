@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { saveSubscription } from '../../domain/commands/subscriptions';
 import { CITIES } from '../../domain/geo/cities';
 import { countVisible, hasPriority, searchListings } from '../../domain/rules/search';
-import type { BodyType, ListingKind, LoadingMethod, SearchFilters, SortKey } from '../../domain/types';
-import { useAppState } from '../../store/store';
+import type { BodyType, ListingKind, LoadingMethod, SearchFilters, SortKey, SubscriptionFrequency } from '../../domain/types';
+import { store, useAppState } from '../../store/store';
 import { MarkBadges, ScoreChip } from '../components/OwnerSummary';
 import { t } from '../i18n';
 import { bodyText, dateText, distanceKm, fromName, ratePerKmText, rateText, toName } from '../listingFormat';
@@ -27,7 +28,10 @@ export function SearchPage() {
   const state = useAppState((s) => s);
   const navigate = useNavigate();
   const actor = getCompany(state, state.actorId);
-  const [filters, setFilters] = useState<SearchFilters>({ kind: actor?.role === 'shipper' ? 'truck' : 'cargo' });
+  // "Open in search" on the subscriptions page passes the saved filters.
+  const location = useLocation();
+  const initial = (location.state as { filters?: SearchFilters } | null)?.filters;
+  const [filters, setFilters] = useState<SearchFilters>(initial ?? { kind: actor?.role === 'shipper' ? 'truck' : 'cargo' });
   const [sort, setSort] = useState<SortKey>('loading_date');
   const ratingOf = (id: string) => getRating(state, id);
   const results = useMemo(
@@ -114,6 +118,7 @@ export function SearchPage() {
           </select>
           <span className="muted">{t('search.priorityFirst')}</span>
         </label>
+        {actor && <SaveSubscription key={JSON.stringify(filters)} filters={filters} />}
       </div>
 
       {results.length === 0 ? (
@@ -185,6 +190,29 @@ export function SearchPage() {
         </div>
       )}
     </section>
+  );
+}
+
+/** "Save as subscription": the current filters, one button (TZ). */
+function SaveSubscription({ filters }: { filters: SearchFilters }) {
+  const [frequency, setFrequency] = useState<SubscriptionFrequency>('instant');
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <span className="inline small">
+      <select id="sub-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value as SubscriptionFrequency)}>
+        <option value="instant">{t('frequency.instant')}</option>
+        <option value="hourly">{t('frequency.hourly')}</option>
+      </select>
+      <button className="btn btn-small" onClick={() => {
+        const res = store.run((s) => saveSubscription(s, filters, frequency));
+        setMessage(res.ok ? { ok: true, text: t('search.subscriptionSaved') } : { ok: false, text: t(`error.${res.error}`) });
+      }}>{t('search.saveSubscription')}</button>
+      {message && (
+        <span className={message.ok ? 'muted' : 'field-error'}>
+          {message.text} <Link to="/subscriptions">{t('search.manageSubscriptions')}</Link>
+        </span>
+      )}
+    </span>
   );
 }
 
