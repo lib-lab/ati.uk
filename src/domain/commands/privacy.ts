@@ -12,6 +12,15 @@ function ownCompany(state: AppState): Company | undefined {
   return state.companies.find((c) => c.id === state.actorId && c.status !== 'deleted');
 }
 
+/**
+ * Export and deletion are confirmed by typing the company name (TZ). Case and surrounding
+ * spaces do not matter; everything else must match the legal name.
+ */
+export function confirmsCompany(company: Pick<Company, 'legalName'>, typed: string): boolean {
+  const norm = (x: string) => x.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  return norm(typed) !== '' && norm(typed) === norm(company.legalName);
+}
+
 function setConsent(state: AppState, personId: Id, withdraw: boolean): CommandResult {
   const company = ownCompany(state);
   const person = company?.contactPersons.find((p) => p.id === personId);
@@ -66,9 +75,11 @@ export function exportCompanyData(state: AppState, companyId: Id) {
   };
 }
 
-export function recordExport(state: AppState): CommandResult {
+/** Confirms the export request; the UI shows exportCompanyData only after this succeeds. */
+export function recordExport(state: AppState, confirmation: string): CommandResult {
   const company = ownCompany(state);
   if (!company) return { ok: false, error: 'not_allowed' };
+  if (!confirmsCompany(company, confirmation)) return { ok: false, error: 'confirmation_mismatch' };
   return {
     ok: true,
     state: logEvent(state, { type: 'data_exported', actor: company.id, subjectIds: [company.id], reasonKey: 'event.data.exported', params: { company: company.id } }),
@@ -79,9 +90,10 @@ export function recordExport(state: AppState): CommandResult {
  * Deleting the account removes personal data (contact persons) and hides the company; reviews,
  * claims and rating events stay, linked to the company without a person's name (TZ).
  */
-export function deleteAccount(state: AppState): CommandResult {
+export function deleteAccount(state: AppState, confirmation: string): CommandResult {
   const company = ownCompany(state);
   if (!company) return { ok: false, error: 'not_allowed' };
+  if (!confirmsCompany(company, confirmation)) return { ok: false, error: 'confirmation_mismatch' };
   let s: AppState = {
     ...state,
     actorId: MODERATOR_ID,
@@ -106,3 +118,28 @@ export const openingRetentionProcess: TimeProcess = {
     return logEvent(s, { type: 'openings_anonymized', actor: 'system', subjectIds: [], reasonKey: 'event.openings.anonymized', params: { count: old.length } });
   },
 };
+
+/**
+ * No automatic cleaning of review texts. A person of a deleted company asks the moderator, who
+ * removes the text of one review; stars, date and weight stay, so the rating does not change.
+ */
+export function hideReviewText(state: AppState, reviewId: Id, requestedBy: Id): CommandResult {
+  if (state.actorId !== MODERATOR_ID) return { ok: false, error: 'not_allowed' };
+  const review = state.reviews.find((r) => r.id === reviewId);
+  if (!review || review.textHidden) return { ok: false, error: 'not_found' };
+  if (state.companies.find((c) => c.id === requestedBy)?.status !== 'deleted') return { ok: false, error: 'not_allowed' };
+  const s = {
+    ...state,
+    reviews: state.reviews.map((r) => (r.id === reviewId ? { ...r, text: '', textHidden: { at: state.now, requestedBy } } : r)),
+  };
+  return {
+    ok: true,
+    state: logEvent(s, {
+      type: 'review_text_hidden',
+      actor: MODERATOR_ID,
+      subjectIds: [review.authorId, review.targetId, requestedBy],
+      reasonKey: 'event.review.textHidden',
+      params: { author: review.authorId, target: review.targetId, requestedBy },
+    }),
+  };
+}

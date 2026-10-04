@@ -255,6 +255,11 @@ export interface Review {
   reply?: { text: string; createdAt: IsoDate };
   /** Voided after confirmed review fraud; never counted again. */
   voided?: boolean;
+  /**
+   * The text was removed by the moderator at the request of a deleted company's person
+   * (TZ "Personal data"); stars, date and weight stay.
+   */
+  textHidden?: { at: IsoDate; requestedBy: Id };
 }
 
 /** open = not confirmed yet (stops counting after 30 days); confirmed by the moderator counts until settled. */
@@ -438,6 +443,7 @@ export type EventType =
   | 'claim_filed'
   | 'claim_resolved'
   | 'review_posted'
+  | 'review_text_hidden'
   | 'flag_set'
   | 'flag_resolved'
   | 'company_deactivated'

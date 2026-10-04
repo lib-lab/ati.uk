@@ -3,10 +3,11 @@ import { CONFIG } from '../domain/config';
 import { getCity } from '../domain/geo/cities';
 import { addDays } from '../domain/time';
 import type { RegistryRecord } from '../domain/types';
+import { CLIENT_SPECS } from './clients';
 import { COMPANY_SPECS, MISMATCH_REGISTRY_NAME } from './companies';
 import { RING_SPECS } from './ring';
 
-export const SEED_REGISTRY_RECORDS: RegistryRecord[] = [...COMPANY_SPECS, ...RING_SPECS].map((s) => ({
+export const SEED_REGISTRY_RECORDS: RegistryRecord[] = [...COMPANY_SPECS, ...RING_SPECS, ...CLIENT_SPECS].map((s) => ({
   country: s.country,
   regNumber: s.regNumber,
   legalName: s.archetype === 'mismatch' ? MISMATCH_REGISTRY_NAME : s.legalName,

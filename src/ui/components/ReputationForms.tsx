@@ -52,6 +52,7 @@ export function ReviewForm({ state, target }: { state: AppState; target: Company
           ))}
         </span>
       </div>
+      <p className="alert alert-neutral small">{t('rep.noPersonalData')}</p>
       <textarea id="rev-text" placeholder={t('rep.reviewPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
       <div className="inline">
         <button className="btn btn-primary btn-small" onClick={submit}>{t('rep.postReview')}</button>
@@ -101,6 +102,7 @@ export function ClaimForm({ state, target }: { state: AppState; target: Company 
   return (
     <div className="panel rep-form">
       <span>{t('rep.claimTitle')}</span>
+      <p className="alert alert-neutral small">{t('rep.noPersonalData')}</p>
       <textarea id="claim-text" placeholder={t('rep.claimPlaceholder')} value={text} onChange={(e) => setText(e.target.value)} />
       <div className="inline">
         <button className="btn btn-small btn-primary" onClick={() => {

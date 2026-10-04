@@ -4,6 +4,7 @@ import { buildSeedState } from '../../seed';
 import { CONFIG } from '../config';
 import { collectionSignals, openingsToday } from '../rules/collection';
 import { publicListing, revealContact } from '../rules/contactPrivacy';
+import { computeRating } from '../rules/rating';
 import { balanceOf } from '../rules/ledger';
 import { editRefund } from '../rules/listingEdits';
 import { searchListings } from '../rules/search';
@@ -12,7 +13,7 @@ import { addDays, addHours, addMonths } from '../time';
 import { MODERATOR_ID, type AppState, type Listing } from '../types';
 import { openContact, requestHigherLimit, unblockCollection } from './contacts';
 import { claimEditRefund, draftOf, editListing, postListing } from './listings';
-import { deleteAccount, exportCompanyData, giveConsent, withdrawConsent } from './privacy';
+import { confirmsCompany, deleteAccount, exportCompanyData, giveConsent, hideReviewText, recordExport, withdrawConsent } from './privacy';
 import type { CommandResult } from './result';
 import { loginAs } from './session';
 import { advanceTime } from './time';
@@ -207,7 +208,10 @@ describe('personal data', () => {
   it('deleting the account removes people, hides the company, keeps reviews and events without names', () => {
     const seed = buildSeedState();
     const reviews = seed.reviews.filter((r) => r.targetId === 'c03' || r.authorId === 'c03').length;
-    const s = ok(deleteAccount(as(seed, 'c03')));
+    // confirmed by typing the company name
+    expect(deleteAccount(as(seed, 'c03'), 'Rhein')).toEqual({ ok: false, error: 'confirmation_mismatch' });
+    expect(deleteAccount(as(seed, 'c03'), '')).toEqual({ ok: false, error: 'confirmation_mismatch' });
+    const s = ok(deleteAccount(as(seed, 'c03'), '  rhein spedition gmbh '));
     const c03 = s.companies.find((c) => c.id === 'c03')!;
     expect(c03).toMatchObject({ status: 'deleted', contactPersons: [] });
     expect(JSON.stringify(s)).not.toContain('Jonas Becker');
@@ -217,8 +221,11 @@ describe('personal data', () => {
     expect(s.actorId).toBe(MODERATOR_ID);
   });
 
-  it('export contains the company’s own data only', () => {
+  it('export is confirmed by the company name and contains the company’s own data only', () => {
     const seed = buildSeedState();
+    expect(recordExport(as(seed, 'c09'), 'Danube')).toEqual({ ok: false, error: 'confirmation_mismatch' });
+    const name = seed.companies.find((c) => c.id === 'c09')!.legalName;
+    expect(ok(recordExport(as(seed, 'c09'), name)).events.at(-1)?.reasonKey).toBe('event.data.exported');
     const data = exportCompanyData(seed, 'c09')!;
     expect(data.company.id).toBe('c09');
     expect(data.claims.every((c) => c.claimantId === 'c09' || c.targetId === 'c09')).toBe(true);
@@ -235,5 +242,28 @@ describe('personal data', () => {
     expect(after.viewerId).toBeNull();
     expect(after.anonymizedAt).toBeDefined();
     expect(s.contactAccesses.length).toBe(seed.contactAccesses.length);
+  });
+
+  it('moderator hides a review text at the request of a deleted company; stars and the rating stay', () => {
+    const seed = buildSeedState();
+    const review = seed.reviews.find((r) => r.authorId === 'c03' && r.text)!;
+    const s = ok(deleteAccount(as(seed, 'c03'), 'Rhein Spedition GmbH'));
+    const before = computeRating(s, review.targetId, s.now);
+    // only the moderator, only for a deleted company's request
+    expect(hideReviewText(as(s, 'c01'), review.id, 'c03')).toEqual({ ok: false, error: 'not_allowed' });
+    expect(hideReviewText(s, review.id, 'c01')).toEqual({ ok: false, error: 'not_allowed' });
+    const hidden = ok(hideReviewText(s, review.id, 'c03'));
+    const r = hidden.reviews.find((x) => x.id === review.id)!;
+    expect(r).toMatchObject({ text: '', stars: review.stars, textHidden: { at: s.now, requestedBy: 'c03' } });
+    expect(computeRating(hidden, review.targetId, hidden.now)).toEqual(before);
+    expect(hidden.events.at(-1)?.reasonKey).toBe('event.review.textHidden');
+    expect(hideReviewText(hidden, review.id, 'c03')).toEqual({ ok: false, error: 'not_found' }); // once
+  });
+
+  it('company name confirmation ignores case and extra spaces only', () => {
+    const c = { legalName: 'Śląskie Kable sp. z o.o.' };
+    expect(confirmsCompany(c, 'śląskie  kable SP. Z O.O.')).toBe(true);
+    expect(confirmsCompany(c, 'Slaskie Kable sp. z o.o.')).toBe(false);
+    expect(confirmsCompany(c, '   ')).toBe(false);
   });
 });

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../domain/config';
+import { hasHistory } from '../domain/rules/collection';
 import { activeFlags } from '../domain/rules/flags';
 import { balanceOf } from '../domain/rules/ledger';
 import { isExpired } from '../domain/rules/lifetime';
 import { monthKey } from '../domain/time';
 import { buildSeedState, SEED_ACTIVE_CARGO, SEED_ACTIVE_TRUCKS } from './index';
+import { CLIENT_SPECS } from './clients';
 import { COMPANY_SPECS } from './companies';
 import { RING_SPECS } from './ring';
 
@@ -15,9 +17,11 @@ describe('seed', () => {
     expect(JSON.stringify(buildSeedState())).toBe(JSON.stringify(state));
   });
 
-  it('has 15–21 companies covering all roles (18 archetypes + a ring of 3)', () => {
-    expect(state.companies.length).toBeGreaterThanOrEqual(15);
-    expect(state.companies.length).toBeLessThanOrEqual(21);
+  it('has 15–21 scenario companies covering all roles (18 archetypes + a ring of 3) and their regular clients', () => {
+    const scenario = state.companies.filter((c) => !CLIENT_SPECS.some((s) => s.id === c.id));
+    expect(scenario.length).toBeGreaterThanOrEqual(15);
+    expect(scenario.length).toBeLessThanOrEqual(21);
+    expect(state.companies.length).toBe(scenario.length + CLIENT_SPECS.length);
     const roles = new Set(state.companies.map((c) => c.role));
     expect(roles).toEqual(new Set(['shipper', 'carrier', 'forwarder']));
   });
@@ -56,7 +60,7 @@ describe('seed', () => {
   });
 
   it('balances match the specs and are never negative over time', () => {
-    for (const spec of [...COMPANY_SPECS, ...RING_SPECS]) {
+    for (const spec of [...COMPANY_SPECS, ...RING_SPECS, ...CLIENT_SPECS]) {
       expect(balanceOf(state.transactions, spec.id)).toBe(spec.balanceEur * 100);
       let running = 0;
       for (const t of state.transactions.filter((t) => t.companyId === spec.id)) {
@@ -104,5 +108,14 @@ describe('seed', () => {
 
   it('clock starts at the configured date', () => {
     expect(state.now).toBe(CONFIG.clockStart);
+  });
+
+  it('Moravia Trans and Euro Cargo Partners are companies with history; their clients add nothing to search', () => {
+    for (const id of ['c04', 'c12']) {
+      expect(hasHistory(state, state.companies.find((c) => c.id === id)!, state.now)).toBe(true);
+    }
+    // the threshold is not tuned to the seed: everyone else stays below it
+    expect(state.companies.filter((c) => hasHistory(state, c, state.now)).map((c) => c.id)).toEqual(['c04', 'c12']);
+    expect(state.listings.filter((l) => l.status === 'active' && CLIENT_SPECS.some((s) => s.id === l.ownerId))).toEqual([]);
   });
 });

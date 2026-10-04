@@ -25,10 +25,11 @@ import {
 } from '../domain/types';
 import { COMPANY_SPECS, type Archetype, type CompanySpec } from './companies';
 import { createRng, type Rng } from './random';
+import { buildClients, CLIENT_SPECS } from './clients';
 import { buildRing, RING_SPECS } from './ring';
 import { SEED_REGISTRY_RECORDS } from './registry';
 
-export const STATE_VERSION = 5;
+export const STATE_VERSION = 6;
 export const SEED_ACTIVE_CARGO = 60;
 export const SEED_ACTIVE_TRUCKS = 30;
 
@@ -75,6 +76,7 @@ const REVIEW_PLAN: Record<Archetype, [number, number[]]> = {
   blocked: [3, [1, 2, 1]],
   no_free_contacts: [5, [4, 5, 4, 3]],
   ring: [0, []], // built separately in ring.ts
+  client: [0, []], // built separately in clients.ts
 };
 
 /** Past (removed/expired) listings per archetype: [count, share removed as found_on_platform]. */
@@ -92,6 +94,7 @@ const HISTORY_PLAN: Record<Archetype, [number, number]> = {
   blocked: [3, 0],
   no_free_contacts: [6, 0.5],
   ring: [0, 0],
+  client: [0, 0],
 };
 
 export interface SeedMeta {
@@ -273,6 +276,16 @@ export function buildSeedState(): AppState {
   for (const a of accesses) {
     a.firstListingId = listings.find((l) => l.ownerId === a.ownerId)?.id ?? '';
   }
+
+  // ----- regular clients of c04 and c12 (independent of the PRNG) -----
+  const clients = buildClients(now);
+  for (const spec of CLIENT_SPECS) {
+    companies.push(buildCompany(spec, now));
+    specById.set(spec.id, spec);
+  }
+  listings.push(...clients.listings);
+  accesses.push(...clients.accesses);
+  debits.push(...clients.debits);
 
   // ----- ledger: one initial top-up covering all seed debits + the target balance -----
   const transactions: LedgerTransaction[] = [];

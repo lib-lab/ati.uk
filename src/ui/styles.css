@@ -206,4 +206,7 @@ a.btn { display: inline-block; text-decoration: none; }
   padding: var(--space-2); /* the browser default, explicit for the height below */
   height: calc(var(--textarea-rows-tall) * 1lh + 2 * var(--space-2) + 2 * var(--border-width));
 }
+.name-confirm { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-8); }
+.name-confirm p, .rep-form .alert { margin: 0; }
+.name-confirm-field { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: var(--narrow-form-max-width); }
 .human-check { display: flex; align-items: center; gap: var(--space-6); margin: var(--space-8) 0; }

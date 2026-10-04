@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { activeFlags } from '../../domain/rules/flags';
 import { activeClaims, countedReviews } from '../../domain/rules/rating';
 import { interactionWeight, reviewWeight } from '../../domain/rules/reviewWeight';
 import { canReply, canReplyToClaim, canSettleClaim } from '../../domain/rules/reviews';
 import { fixProfileData } from '../../domain/commands/moderation';
+import { hideReviewText } from '../../domain/commands/privacy';
 import { explainRating, type ComponentExplanation } from '../../domain/rules/ratingExplain';
-import type { AppState, Claim, Review } from '../../domain/types';
+import { MODERATOR_ID, type AppState, type Claim, type Review } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { DisputeButton } from '../components/DisputeButton';
 import { FlagBadge, flagLabel } from '../components/FlagBadge';
@@ -183,9 +185,41 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
         )}
       </div>
       {review.text && <div>{review.text}</div>}
+      {review.textHidden && <div className="muted small">{t('company.review.textHidden', { date: formatDate(review.textHidden.at) })}</div>}
       {review.reply && <div className="reply small"><span className="muted">{t('company.review.reply')}</span> {review.reply.text}</div>}
       {canReply(review, state.actorId) && <ReplyForm review={review} />}
+      {state.actorId === MODERATOR_ID && review.text && <HideTextForm state={state} review={review} />}
     </li>
+  );
+}
+
+/** Moderator: remove the text of a review at the request of a deleted company's person (TZ "Personal data"). */
+function HideTextForm({ state, review }: { state: AppState; review: Review }) {
+  const [open, setOpen] = useState(false);
+  const deleted = state.companies.filter((c) => c.status === 'deleted');
+  const [requestedBy, setRequestedBy] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  if (!open) return <button className="link-button small" onClick={() => setOpen(true)}>{t('mod.hideText')}</button>;
+  return (
+    <div className="inline">
+      {deleted.length === 0 ? (
+        <span className="muted small">{t('mod.hideText.noDeleted')}</span>
+      ) : (
+        <>
+          <select id={`hide-${review.id}`} value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)}>
+            <option value="">{t('mod.hideText.requestedBy')}</option>
+            {deleted.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
+          </select>
+          <button className="btn btn-small btn-danger" disabled={!requestedBy} onClick={() => {
+            const res = store.run((s) => hideReviewText(s, review.id, requestedBy));
+            setError(res.ok ? null : t(`error.${res.error}`));
+          }}>{t('mod.hideText.confirm')}</button>
+        </>
+      )}
+      <button className="btn btn-small btn-ghost" onClick={() => setOpen(false)}>{t('contact.cancel')}</button>
+      <span className="muted small">{t('mod.hideText.hint')}</span>
+      {error && <span className="field-error">{error}</span>}
+    </div>
   );
 }
 

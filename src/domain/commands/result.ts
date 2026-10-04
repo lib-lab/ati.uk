@@ -25,7 +25,8 @@ export type CommandError =
   | 'collection_blocked'
   | 'no_history'
   | 'refund_not_available'
-  | 'account_deleted';
+  | 'account_deleted'
+  | 'confirmation_mismatch';
 
 /**
  * A failed command may still carry a state to keep (e.g. a failed human check is counted):

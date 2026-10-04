@@ -87,7 +87,7 @@ export const CONFIG = {
     raisedDailyOpenLimit: 150,
     /** "Company with history" for a raised limit without review. */
     historyMinMonths: 3,
-    historyMinOpenings: 8, // [A] low enough for seed companies c04 and c12 to show the raise
+    historyMinOpenings: 20,
     // signals
     burstCount: 10,
     burstMinutes: 5,

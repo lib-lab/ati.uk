@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { requestHigherLimit } from '../../domain/commands/contacts';
-import { deleteAccount, exportCompanyData, giveConsent, recordExport, withdrawConsent } from '../../domain/commands/privacy';
+import { confirmsCompany, deleteAccount, exportCompanyData, giveConsent, recordExport, withdrawConsent } from '../../domain/commands/privacy';
 import { CONFIG } from '../../domain/config';
 import { dailyLimit, hasHistory, openingsToday } from '../../domain/rules/collection';
 import { hasConsent } from '../../domain/rules/contactPrivacy';
@@ -15,19 +15,33 @@ export function AccountPage() {
   const company = getCompany(state, state.actorId);
   const [exported, setExported] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Export and deletion are confirmed by typing the company name (TZ "Personal data").
+  const [confirming, setConfirming] = useState<'export' | 'delete' | null>(null);
+  const [typed, setTyped] = useState('');
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   if (!company) return <p className="muted">{t('account.notCompany')}</p>;
 
   const limit = dailyLimit(company);
   const used = openingsToday(state, company.id, state.now);
 
+  const startConfirm = (what: 'export' | 'delete') => {
+    setConfirming(what);
+    setTyped('');
+    setConfirmError(null);
+  };
+
   const onExport = () => {
+    const res = store.run((s) => recordExport(s, typed));
+    if (!res.ok) {
+      setConfirmError(t(`error.${res.error}`));
+      return;
+    }
+    setConfirming(null);
     const data = exportCompanyData(state, company.id);
     const json = JSON.stringify(data, null, 2);
     setExported(json);
     setCopied(false);
-    store.run(recordExport);
     // Also offer a file where the host allows downloads (embedded previews block them).
     try {
       const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -99,7 +113,12 @@ export function AccountPage() {
 
       <h2>{t('account.exportTitle')}</h2>
       <p className="muted small">{t('account.exportHint')}</p>
-      <button className="btn" onClick={onExport}>{t('account.export')}</button>
+      {confirming === 'export' ? (
+        <NameConfirm name={company.legalName} typed={typed} setTyped={setTyped} error={confirmError}
+          action={t('account.export')} danger={false} onConfirm={onExport} onCancel={() => setConfirming(null)} />
+      ) : (
+        <button className="btn" onClick={() => startConfirm('export')}>{t('account.exportStart')}</button>
+      )}
       {exported && (
         <div className="export">
           <button className="btn btn-small" onClick={() => {
@@ -111,15 +130,46 @@ export function AccountPage() {
 
       <h2>{t('account.deleteTitle')}</h2>
       <p className="muted small">{t('account.deleteHint')}</p>
-      {confirmDelete ? (
-        <div className="inline">
-          <span>{t('account.deleteConfirm')}</span>
-          <button className="btn btn-danger" onClick={() => store.run(deleteAccount)}>{t('account.deleteYes')}</button>
-          <button className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>{t('contact.cancel')}</button>
-        </div>
+      {confirming === 'delete' ? (
+        <NameConfirm name={company.legalName} typed={typed} setTyped={setTyped} error={confirmError}
+          action={t('account.deleteYes')} danger note={t('account.deleteConfirm')}
+          onConfirm={() => {
+            const res = store.run((s) => deleteAccount(s, typed));
+            if (!res.ok) setConfirmError(t(`error.${res.error}`));
+          }}
+          onCancel={() => setConfirming(null)} />
       ) : (
-        <button className="btn btn-ghost" onClick={() => setConfirmDelete(true)}>{t('account.delete')}</button>
+        <button className="btn btn-ghost" onClick={() => startConfirm('delete')}>{t('account.delete')}</button>
       )}
     </section>
+  );
+}
+
+/** Confirmation step: type the company name. The button stays disabled until the name matches. */
+function NameConfirm(props: {
+  name: string;
+  typed: string;
+  setTyped: (v: string) => void;
+  error: string | null;
+  action: string;
+  danger: boolean;
+  note?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const matches = confirmsCompany({ legalName: props.name }, props.typed);
+  return (
+    <div className="name-confirm">
+      {props.note && <p>{props.note}</p>}
+      <label className="name-confirm-field">
+        <span className="small">{t('account.typeName', { name: props.name })}</span>
+        <input id="confirm-name" value={props.typed} autoComplete="off" onChange={(e) => props.setTyped(e.target.value)} />
+      </label>
+      <div className="inline">
+        <button className={props.danger ? 'btn btn-danger' : 'btn btn-primary'} disabled={!matches} onClick={props.onConfirm}>{props.action}</button>
+        <button className="btn btn-ghost" onClick={props.onCancel}>{t('contact.cancel')}</button>
+      </div>
+      {props.error && <p className="alert alert-red">{props.error}</p>}
+    </div>
   );
 }

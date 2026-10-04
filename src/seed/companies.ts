@@ -15,7 +15,8 @@ export type Archetype =
   | 'inactive'
   | 'blocked'
   | 'no_free_contacts'
-  | 'ring';
+  | 'ring'
+  | 'client';
 
 export interface CompanySpec {
   id: string;

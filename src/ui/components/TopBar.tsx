@@ -8,13 +8,14 @@ import { unreadCount } from '../../domain/notifications';
 import { findAccess, freeContactsLeft } from '../../domain/rules/contactAccess';
 import { isExpired } from '../../domain/rules/lifetime';
 import { balanceOf } from '../../domain/rules/ledger';
-import { addDays, addMonths } from '../../domain/time';
+import { addDays, addHours, addMonths } from '../../domain/time';
 import { MODERATOR_ID, type IsoDate } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { formatDateTime, formatMoney } from '../format';
 import { t } from '../i18n';
 
 const SHIFTS: { key: string; to: (now: IsoDate) => IsoDate }[] = [
+  { key: 'time.plusHour', to: (now) => addHours(now, 1) },
   { key: 'time.plusDay', to: (now) => addDays(now, 1) },
   { key: 'time.plusWeek', to: (now) => addDays(now, 7) },
   { key: 'time.plusSixMonths', to: (now) => addMonths(now, 6) },
