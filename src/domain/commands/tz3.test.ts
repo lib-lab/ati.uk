@@ -79,21 +79,25 @@ describe('editing a listing after contacts were opened', () => {
     expect(editListing(as(s, 'o'), l.id, cargoDraft({ weightT: 0 }))).toEqual({ ok: false, error: 'invalid_listing' });
   });
 
-  it('nothing to return for an open listing; a package contact waits for packages (E11)', () => {
+  it('nothing to return for an open listing; a package contact goes back to its package while it is valid', () => {
     let [s, l] = withListing();
-    s = ok(openContact(as(s, 'v1'), l.id));
-    s = {
-      ...s,
-      contactAccesses: s.contactAccesses.map((a) => (a.viewerId === 'v1' && a.ownerId === 'o' ? { ...a, paidWith: 'package' as const, transactionId: undefined } : a)),
-    };
+    s = { ...s, packages: [{ id: 'p1', companyId: 'v1', size: 20, used: 0, validFrom: NOW, validTo: addDays(NOW, 30) }] };
+    s = ok(openContact(as(s, 'v1'), l.id)); // free contacts used up → from the package
+    expect(s.contactAccesses.find((a) => a.viewerId === 'v1' && a.ownerId === 'o')).toMatchObject({ paidWith: 'package', packageId: 'p1' });
+    expect(s.packages[0]!.used).toBe(1);
     s = ok(openContact(as(s, 'v2'), l.id));
     s = { ...s, contactAccesses: s.contactAccesses.map((a) => (a.viewerId === 'v2' && a.ownerId === 'o' ? { ...a, paidWith: 'open_listing' as const } : a)) };
     s = ok(editListing(as(s, 'o'), l.id, { ...draftOf(s.listings.find((x) => x.id === l.id)!), weightT: 20 }));
-    // no refund button either
-    expect(editRefund(s, 'v1', l.id)).toBeNull();
-    expect(editRefund(s, 'v2', l.id)).toBeNull();
-    expect(claimEditRefund(as(s, 'v1'), l.id)).toEqual({ ok: false, error: 'refund_not_available' });
+    expect(editRefund(s, 'v2', l.id)).toBeNull(); // no refund button for a free open listing
     expect(claimEditRefund(as(s, 'v2'), l.id)).toEqual({ ok: false, error: 'refund_not_available' });
+    const balance = balanceOf(s.transactions, 'v1');
+    const refunded = ok(claimEditRefund(as(s, 'v1'), l.id));
+    expect(refunded.packages[0]!.used).toBe(0);
+    expect(balanceOf(refunded.transactions, 'v1')).toBe(balance);
+    expect(refunded.notifications.at(-1)).toMatchObject({ type: 'refund', params: { variant: 'packageEdit' } });
+    // an expired package cannot take the contact back
+    const late = { ...s, packages: s.packages.map((p) => ({ ...p, validTo: addHours(NOW, 1) })), now: addHours(NOW, 2) };
+    expect(claimEditRefund(as(late, 'v1'), l.id)).toEqual({ ok: false, error: 'refund_not_available' });
   });
 });
 

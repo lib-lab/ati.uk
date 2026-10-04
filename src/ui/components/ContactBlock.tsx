@@ -5,6 +5,7 @@ import { openContact } from '../../domain/commands/contacts';
 import { claimEditRefund } from '../../domain/commands/listings';
 import { openingGate } from '../../domain/rules/collection';
 import { revealContact, type PublicListing } from '../../domain/rules/contactPrivacy';
+import { refundFor } from '../../domain/rules/complaints';
 import { editRefund } from '../../domain/rules/listingEdits';
 import { CONFIG } from '../../domain/config';
 import { decideContact, findAccess } from '../../domain/rules/contactAccess';
@@ -36,7 +37,8 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
     // An already opened contact is shown on this listing only after "Show" (it is logged for change notifications).
     const revealedHere =
       decision.kind === 'own_listing' || state.contactOpenings.some((o) => o.viewerId === viewerId && o.listingId === listing.id);
-    const refund = decision.kind === 'already_open' ? editRefund(state, viewerId, listing.id) : null;
+    // The button shows only when something can actually be returned (e.g. not for an expired package).
+    const refund = decision.kind === 'already_open' && editRefund(state, viewerId, listing.id) && refundFor(state, access, state.now).kind !== 'none';
     return (
       <div className="contact">
         {revealedHere ? (
@@ -85,7 +87,10 @@ export function ContactBlock({ state, listing, ownerRating }: { state: AppState;
       break;
     case 'package':
       label = t('contact.openPackage');
-      note = t('contact.packageNote');
+      {
+        const pkg = state.packages.find((p) => p.id === decision.packageId)!;
+        note = t('contact.packageNote', { left: pkg.size - pkg.used - 1, size: pkg.size, until: formatDate(pkg.validTo) });
+      }
       break;
     case 'balance':
       label = t('contact.open', { price: formatMoney(decision.price) });

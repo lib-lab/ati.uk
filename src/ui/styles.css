@@ -34,6 +34,7 @@ a:hover { text-decoration: underline; }
 }
 .toolbar-label { font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: var(--letter-spacing-caps); color: var(--muted); }
 .toolbar-end { margin-left: auto; }
+.toolbar-toggle { display: none; }
 .btn-small { padding: var(--button-small-padding-y) var(--control-padding-x); font-size: var(--font-size-md); }
 .counter { display: inline-block; min-width: var(--counter-min-width); margin-left: var(--space-4); padding: 0 var(--space-5); border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font-size: var(--font-size-xs); text-align: center; }
 
@@ -68,6 +69,16 @@ select, input {
 
 @media (max-width: 640px) {
   .topbar-account, .toolbar-end { margin-left: 0; }
+  /* Compact top bar: the test tools fold into one tappable line. */
+  .toolbar-label { display: none; }
+  .toolbar-toggle {
+    display: flex; align-items: baseline; gap: var(--space-6); width: 100%; padding: 0; border: none; background: none;
+    color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  }
+  .toolbar-label-text { font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: var(--letter-spacing-caps); color: var(--muted); }
+  .toolbar-summary { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toolbar.collapsed > :not(.toolbar-toggle) { display: none; }
+  .tabs { flex-wrap: wrap; }
   .page { padding: var(--space-12); }
 }
 
@@ -211,3 +222,13 @@ a.btn { display: inline-block; text-decoration: none; }
 .name-confirm-field { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; max-width: var(--narrow-form-max-width); }
 .human-check { display: flex; align-items: center; gap: var(--space-6); margin: var(--space-8) 0; }
 .notification-links { margin-left: var(--space-8); }
+
+/* Search results as cards (narrow screens only, see the media query above) */
+.result-cards { display: none; flex-direction: column; gap: var(--space-8); list-style: none; padding: 0; margin: var(--space-12) 0 0; }
+.result-card { border: var(--border-width) solid var(--border); border-radius: var(--radius-lg); padding: var(--space-10) var(--space-12); display: flex; flex-direction: column; gap: var(--space-4); }
+.result-card-route { font-weight: var(--font-weight-medium); }
+.result-card-facts { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-12); }
+@media (max-width: 640px) {
+  .results-table { display: none; }
+  .result-cards { display: flex; }
+}

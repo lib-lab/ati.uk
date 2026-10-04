@@ -184,7 +184,9 @@ export interface ContactAccess {
   openedAt: IsoDate;
   paidWith: ContactPaidWith;
   transactionId?: Id;
-  /** Set when a confirmed complaint refunded this access. */
+  /** The package the contact was taken from (paidWith: package); a refund returns it there. */
+  packageId?: Id;
+  /** Set when a confirmed complaint or a key edit refunded this access. */
   refundedAt?: IsoDate;
 }
 

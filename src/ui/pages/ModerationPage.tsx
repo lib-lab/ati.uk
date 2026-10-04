@@ -68,7 +68,7 @@ function refundPreview(state: AppState, c: Complaint): string {
   if (plan.kind === 'wait') return t('mod.refundWait', { weight: plan.weight.toFixed(1), needed: plan.needed });
   const own = refundFor(state, findAccess(state, c.reporterId, c.targetId), state.now);
   const ownText = own.kind === 'money' ? t('mod.refundMoney', { amount: formatMoney(own.amount) })
-    : own.kind === 'free_quota' ? t('mod.refundQuota') : t(`mod.refundNone.${own.reason}`);
+    : own.kind === 'free_quota' ? t('mod.refundQuota') : own.kind === 'package' ? t('mod.refundPackage') : t(`mod.refundNone.${own.reason}`);
   return plan.reporterIds.length > 1 ? `${ownText} ${t('mod.refundAll', { count: plan.reporterIds.length })}` : ownText;
 }
 

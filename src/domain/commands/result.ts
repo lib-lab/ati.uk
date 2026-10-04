@@ -30,7 +30,8 @@ export type CommandError =
   | 'subscription_exists'
   | 'invalid_registration'
   | 'consent_required'
-  | 'already_registered';
+  | 'already_registered'
+  | 'package_active';
 
 /**
  * A failed command may still carry a state to keep (e.g. a failed human check is counted):

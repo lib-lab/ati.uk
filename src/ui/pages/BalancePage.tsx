@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { adapters } from '../../adapters';
-import { topUp } from '../../domain/commands/balance';
+import { buyPackage, topUp } from '../../domain/commands/balance';
 import { CONFIG } from '../../domain/config';
-import { freeContactsLeft } from '../../domain/rules/contactAccess';
+import { activePackage, freeContactsLeft } from '../../domain/rules/contactAccess';
 import { balanceOf } from '../../domain/rules/ledger';
 import type { Cents } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
-import { formatDateTime, formatMoney } from '../format';
+import { formatDate, formatDateTime, formatMoney } from '../format';
 import { t } from '../i18n';
 import { getCompany } from '../selectors';
 
@@ -32,6 +32,12 @@ export function BalancePage() {
   };
 
   const txs = state.transactions.filter((tx) => tx.companyId === actor.id).reverse();
+  const pkg = activePackage(state, actor.id, state.now);
+  const offer = CONFIG.prices.package;
+  const onBuy = () => {
+    const res = store.run(buyPackage);
+    setMessage(res.ok ? { ok: true, text: t('balance.packageBought', { size: offer.size }) } : { ok: false, text: t(`error.${res.error}`) });
+  };
 
   return (
     <section>
@@ -48,6 +54,11 @@ export function BalancePage() {
           </div>
         </div>
         <div>
+          <div className="muted small">{t('balance.package')}</div>
+          <div className="big">{pkg ? `${pkg.size - pkg.used} / ${pkg.size}` : '—'}</div>
+          {pkg && <div className="muted small">{t('balance.packageUntil', { date: formatDate(pkg.validTo) })}</div>}
+        </div>
+        <div>
           <div className="muted small">{t('balance.contactPrice')}</div>
           <div className="big">{formatMoney(CONFIG.prices.contact)}</div>
         </div>
@@ -61,6 +72,15 @@ export function BalancePage() {
             + {formatMoney(a)}
           </button>
         ))}
+      </div>
+
+      <h2>{t('balance.packageTitle')}</h2>
+      <p className="muted small">
+        {t('balance.packageOffer', { size: offer.size, days: offer.days, price: formatMoney(offer.price), each: formatMoney(Math.round(offer.price / offer.size)) })}
+      </p>
+      <div className="inline">
+        <button className="btn" disabled={!!pkg} onClick={onBuy}>{t('balance.buyPackage', { price: formatMoney(offer.price) })}</button>
+        {pkg && <span className="muted small">{t('balance.packageActive')}</span>}
       </div>
       {message && <p className={message.ok ? 'alert alert-neutral' : 'alert alert-red'}>{message.text}</p>}
 

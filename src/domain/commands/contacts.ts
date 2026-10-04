@@ -69,7 +69,10 @@ export function openContact(state: AppState, listingId: Id, options: OpenOptions
   let accessId: Id;
   [s, accessId] = nextId(s, 'a');
   const paidWith: ContactPaidWith = decision.kind;
-  const access: ContactAccess = { id: accessId, viewerId, ownerId: listing.ownerId, firstListingId: listing.id, openedAt: s.now, paidWith };
+  const access: ContactAccess = {
+    id: accessId, viewerId, ownerId: listing.ownerId, firstListingId: listing.id, openedAt: s.now, paidWith,
+    ...(decision.kind === 'package' ? { packageId: decision.packageId } : {}),
+  };
 
   if (decision.kind === 'balance') {
     let txId: Id;

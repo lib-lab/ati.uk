@@ -162,7 +162,7 @@ export const en = {
   'contact.freeLeft': '{left} of {total} free contacts left this month.',
   'contact.openListingNote': 'This listing is open: the contact is free for everyone.',
   'contact.balanceNote': 'Free contacts for this month are used up. {price} will be charged from your balance ({balance}).',
-  'contact.packageNote': 'One contact will be taken from your package.',
+  'contact.packageNote': 'One contact will be taken from your package: {left} of {size} left after this, valid until {until}.',
   'contact.noFunds': 'Free contacts for this month are used up and your balance ({balance}) is less than the price ({price}).',
   'contact.noFundsHint': 'Top up your balance to open this contact.',
   'contact.topUpLink': 'Top up balance',
@@ -865,6 +865,25 @@ export const en = {
   'error.invalid_registration': 'Some fields are missing or invalid',
   'error.consent_required': 'The contact person\'s consent is required',
   'error.already_registered': 'This number is already registered: one company — one account',
+
+  // ----- contact packages (E11) -----
+  'balance.package': 'Package',
+  'balance.packageUntil': 'valid until {date}',
+  'balance.packageTitle': 'Contact package',
+  'balance.packageOffer': '{size} contacts for {days} days, {price} ({each} per contact). Used after the free contacts of the month; unused contacts expire with the package.',
+  'balance.buyPackage': 'Buy a package · {price}',
+  'balance.packageActive': 'A new package can be bought when this one is used up or expires.',
+  'balance.packageBought': 'Package bought: {size} contacts.',
+  'topbar.package': 'Package',
+  'topbar.packageUntil': 'until {date}',
+  'event.payment.package': 'Bought a package of {size} contacts for {amount}, valid until {until}',
+  'event.refund.package': 'Contact of {target} returned to the package after a confirmed complaint',
+  'event.refund.packageEdit': 'Contact of {target} returned to the package: key fields of the listing changed soon after opening',
+  'notification.refund.package': 'Your complaint about {target} was confirmed. The contact is returned to your package.',
+  'notification.refund.packageEdit': 'The contact for {target} is returned to your package: the listing changed after you opened it.',
+  'mod.refundPackage': 'refund on confirmation: the contact goes back to the package',
+  'mod.refundNone.package_expired': 'no refund: the package has expired',
+  'error.package_active': 'The current package is still active',
 } as const;
 
 export type MessageKey = keyof typeof en;

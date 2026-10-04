@@ -35,7 +35,10 @@ describe('i18n', () => {
       keys.add(`event.rating.flag.${kind}`);
       keys.add(`event.rating.flagResolved.${kind}`);
     }
-    for (const kind of ['money', 'quota']) keys.add(`event.refund.${kind}Edit`);
+    for (const kind of ['money', 'quota', 'package']) {
+      keys.add(`event.refund.${kind}`);
+      keys.add(`event.refund.${kind}Edit`);
+    }
     for (const f of ['instant', 'hourly']) {
       keys.add(`event.subscription.saved.${f}`);
       keys.add(`event.subscription.frequency.${f}`);
@@ -73,6 +76,8 @@ describe('i18n', () => {
       'notification.refund.quotaEdit',
       'notification.collection_slowed',
       'notification.collection_blocked',
+      'notification.refund.package',
+      'notification.refund.packageEdit',
       'notification.subscription_match',
       'notification.subscription_digest',
     ];

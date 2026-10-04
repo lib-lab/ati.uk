@@ -133,7 +133,37 @@ export function SearchPage() {
           )}
         </div>
       ) : (
-        <div className="table-wrap">
+        <>
+        <ul className="result-cards">
+          {results.map((l) => {
+            const owner = getCompany(state, l.ownerId)!;
+            const rating = ratingOf(owner.id);
+            const perKm = ratePerKmText(l);
+            return (
+              <li key={l.id} className="result-card clickable" onClick={() => navigate(`/listing/${l.id}`)}>
+                <a className="result-card-route" href={`#/listing/${l.id}`} onClick={(e) => e.stopPropagation()}>
+                  {fromName(l)} → {toName(l)}
+                </a>
+                <div className="result-card-facts small">
+                  <span className="nowrap">{dateText(l)}</span>
+                  <span>{bodyText(l)}</span>
+                  <span className="nowrap">{l.weightT} t{l.volumeM3 !== undefined && ` · ${l.volumeM3} m³`}</span>
+                  <span className="nowrap">{rateText(l)}{perKm && <span className="muted"> · {perKm}</span>}</span>
+                </div>
+                <div className="inline">
+                  <ScoreChip rating={rating} />
+                  <Link to={`/company/${owner.id}`} onClick={(e) => e.stopPropagation()}>{owner.legalName}</Link>
+                </div>
+                <div className="badges">
+                  <MarkBadges rating={rating} company={owner} />
+                  {hasPriority(l, state.now) && <span className="badge badge-accent">{t('listing.priority')}</span>}
+                  {l.isOpen && <span className="badge badge-neutral">{t('listing.open')}</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="table-wrap results-table">
           <table className="table results">
             <thead>
               <tr>
@@ -188,6 +218,7 @@ export function SearchPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );
