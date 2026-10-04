@@ -23,9 +23,32 @@ describe('i18n', () => {
       keys.add(`event.listing.removed.${r}`);
       keys.add(`event.rating.removed.${r}`);
     }
+    for (const type of ['outdated', 'no_response']) keys.add(`event.complaint.filed.${type}`);
+    for (const st of ['confirmed', 'rejected']) keys.add(`event.complaint.${st}`);
+    for (const kind of ['fraud_blocked', 'suspected_linked', 'liquidated', 'data_mismatch']) {
+      keys.add(`event.flag.set.${kind}`);
+      keys.add(`event.flag.resolved.${kind}`);
+    }
+    for (const kind of ['fraud_blocked', 'suspected_linked']) {
+      keys.add(`event.rating.flag.${kind}`);
+      keys.add(`event.rating.flagResolved.${kind}`);
+    }
     for (const k of [...keys]) if (k.endsWith('.')) keys.delete(k);
     const missing = [...keys].filter((k) => !(k in en));
     expect(missing).toEqual([]);
+  });
+
+  it('has a text for every notification the domain creates', () => {
+    const keys = [
+      'notification.expiry_reminder',
+      'notification.listing_expired',
+      'notification.refund.money',
+      'notification.refund.quota',
+      'notification.complaint_resolved.confirmed',
+      'notification.complaint_resolved.rejected',
+      'notification.listings_hidden',
+    ];
+    expect(keys.filter((k) => !(k in en))).toEqual([]);
   });
 
   it('substitutes params and falls back to the key', () => {

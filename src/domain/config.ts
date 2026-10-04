@@ -54,6 +54,9 @@ export const CONFIG = {
 
   complaints: { hideThreshold: 3, windowDays: 30 },
 
+  /** Linked-accounts detector: reciprocal top marks within a few days are suspicious. [A] */
+  detector: { praiseStars: 5, mutualWithinDays: 7 },
+
   inactivity: { deactivateAfterMonths: 6 },
 
   /** Straight-line distance multiplier to approximate road distance. [A] */

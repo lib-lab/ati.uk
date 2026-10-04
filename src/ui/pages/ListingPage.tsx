@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { hasPriority } from '../../domain/rules/search';
 import { useAppState } from '../../store/store';
+import { ComplaintBlock } from '../components/ComplaintBlock';
 import { ContactBlock } from '../components/ContactBlock';
 import { OwnerSummary } from '../components/OwnerSummary';
 import { formatDate, formatDateTime } from '../format';
@@ -103,6 +104,7 @@ export function ListingPage() {
           <OwnerSummary rating={rating} company={owner} />
           <h2>{t('contact.title')}</h2>
           <ContactBlock state={state} listing={listing} ownerRating={rating} />
+          <ComplaintBlock state={state} listing={listing} />
         </aside>
       </div>
     </section>

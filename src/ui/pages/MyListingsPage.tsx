@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buyPriority, extendListing, makeListingOpen, removeListing } from '../../domain/commands/listings';
+import { confirmContactData } from '../../domain/commands/moderation';
 import type { CommandResult } from '../../domain/commands/result';
 import { CONFIG } from '../../domain/config';
 import { isExpired } from '../../domain/rules/lifetime';
@@ -32,7 +33,12 @@ export function MyListingsPage() {
         <h1>{t('my.title')}</h1>
         <Link to="/post" className="btn btn-primary">{t('nav.post')}</Link>
       </div>
-      {owner.listingsHiddenUntilContactConfirmed && <p className="alert alert-yellow">{t('my.hiddenNotice')}</p>}
+      {owner.listingsHiddenUntilContactConfirmed && (
+        <div className="alert alert-yellow">
+          {t('my.hiddenNotice')}{' '}
+          <button className="btn btn-small" onClick={() => store.run(confirmContactData)}>{t('my.confirmContact')}</button>
+        </div>
+      )}
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'active'} className={tab === 'active' ? 'tab active' : 'tab'} onClick={() => setTab('active')}>
           {t('my.tab.active', { count: active.length })}

@@ -22,6 +22,7 @@ export function TopBar() {
   const state = useAppState((s) => s);
   const actor = state.companies.find((c) => c.id === state.actorId);
   const unread = actor ? unreadCount(state, actor.id) : 0;
+  const pendingComplaints = state.complaints.filter((c) => c.status === 'pending').length;
 
   // In-page confirmation: window.confirm() is not available in every host (e.g. embedded previews).
   const [confirmingReset, setConfirmingReset] = useState(false);
@@ -41,6 +42,12 @@ export function TopBar() {
             <NavLink to="/notifications">
               {t('nav.notifications')}
               {unread > 0 && <span className="counter">{unread}</span>}
+            </NavLink>
+          )}
+          {state.actorId === MODERATOR_ID && (
+            <NavLink to="/moderation">
+              {t('nav.moderation')}
+              {pendingComplaints > 0 && <span className="counter">{pendingComplaints}</span>}
             </NavLink>
           )}
           <NavLink to="/events">{t('nav.events')}</NavLink>

@@ -57,6 +57,8 @@ export interface Company {
   verification: Verification;
   /** Set by the 3-complaints-in-30-days rule; cleared when the owner confirms contact data. */
   listingsHiddenUntilContactConfirmed: boolean;
+  /** Last time the owner confirmed contact data; complaints before it no longer count towards hiding. */
+  contactConfirmedAt?: IsoDate;
   /** Simulated device fingerprint, used by the linked-accounts detector. */
   deviceId: string;
 }
@@ -282,6 +284,7 @@ export type NotificationType =
   | 'listing_expired'
   | 'refund'
   | 'listings_hidden'
+  | 'complaint_resolved'
   | 'deactivated';
 
 export interface Notification {
@@ -290,7 +293,7 @@ export interface Notification {
   type: NotificationType;
   createdAt: IsoDate;
   readAt?: IsoDate;
-  /** i18n params; listing ids etc. */
+  /** i18n params; listing ids etc. `variant` selects the text "notification.<type>.<variant>". */
   params: Record<string, string | number>;
 }
 

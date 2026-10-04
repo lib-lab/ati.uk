@@ -28,5 +28,6 @@ export function eventText(state: AppState, e: EventLogEntry): string {
 }
 
 export function notificationText(state: AppState, n: Notification): string {
-  return t(`notification.${n.type}`, readableParams(state, n.params));
+  const key = n.params.variant ? `notification.${n.type}.${n.params.variant}` : `notification.${n.type}`;
+  return t(key, readableParams(state, n.params));
 }

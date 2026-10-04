@@ -198,3 +198,6 @@ a.btn { display: inline-block; text-decoration: none; }
 .star-input { display: inline-flex; }
 .star { border: none; background: none; font-size: 20px; line-height: 1; color: var(--border); cursor: pointer; padding: 0 2px; }
 .star.on { color: var(--text); }
+
+/* ---- complaints ---- */
+.complaint { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }

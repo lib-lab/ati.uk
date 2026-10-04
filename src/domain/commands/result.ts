@@ -16,6 +16,8 @@ export type CommandError =
   | 'review_not_allowed'
   | 'review_too_soon'
   | 'invalid_claim'
-  | 'claim_not_allowed';
+  | 'claim_not_allowed'
+  | 'complaint_not_allowed'
+  | 'not_found';
 
 export type CommandResult = { ok: true; state: AppState } | { ok: false; error: CommandError };
