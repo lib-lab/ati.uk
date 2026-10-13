@@ -8,7 +8,7 @@ import { ContactBlock } from '../components/ContactBlock';
 import { OwnerSummary } from '../components/OwnerSummary';
 import { formatDate, formatDateTime } from '../format';
 import { t } from '../i18n';
-import { bodyText, dateText, distanceKm, fromName, ratePerKmText, rateText, toName } from '../listingFormat';
+import { bodyText, dateText, distanceKm, fromName, ratePerKmText, rateText, toName, volumeText, weightText } from '../listingFormat';
 import { getCompany, getRating } from '../selectors';
 
 export function ListingPage() {
@@ -70,11 +70,11 @@ export function ListingPage() {
             <dt>{t('listing.field.body')}</dt>
             <dd>{bodyText(listing)}</dd>
             <dt>{listing.kind === 'cargo' ? t('listing.field.weight') : t('listing.field.capacity')}</dt>
-            <dd>{listing.weightT} t</dd>
+            <dd>{weightText(listing)}</dd>
             {listing.volumeM3 !== undefined && (
               <>
                 <dt>{t('listing.field.volume')}</dt>
-                <dd>{listing.volumeM3} m³</dd>
+                <dd>{volumeText(listing)}</dd>
               </>
             )}
             <dt>{t('listing.field.loading')}</dt>

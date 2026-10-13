@@ -1,7 +1,6 @@
 // All user-facing strings. Sentence case. Placeholders: {name}.
 export const en = {
-  'app.title': 'Freight board',
-  'app.prototypeBadge': 'prototype',
+  'app.homeHint': 'Freight board prototype: demo data, test payments and registry. Home: search',
 
   'nav.search': 'Search',
   'nav.companies': 'Log in as',
@@ -888,6 +887,14 @@ export const en = {
   'mod.refundPackage': 'refund on confirmation: the contact goes back to the package',
   'mod.refundNone.package_expired': 'no refund: the package has expired',
   'error.package_active': 'The current package is still active',
+
+  // ----- interface language -----
+  'app.documentTitle': 'Freight board prototype',
+  'lang.russian': 'Russian interface',
+  'lang.toRu': 'Switch the interface to Russian',
+  'lang.toEn': 'Switch the interface to English',
+  'unit.t': 't',
+  'unit.m3': 'm³',
 } as const;
 
 export type MessageKey = keyof typeof en;

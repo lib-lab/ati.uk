@@ -11,7 +11,7 @@ import type { AppState, Listing, RemovalReason } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { formatDate, formatMoney } from '../format';
 import { t } from '../i18n';
-import { dateText, fromName, toName } from '../listingFormat';
+import { dateText, fromName, toName, weightText } from '../listingFormat';
 import { getCompany } from '../selectors';
 
 type Tab = 'active' | 'closed';
@@ -81,7 +81,7 @@ function MyListingRow({ state, listing: l }: { state: AppState; listing: Listing
     <li className="list-item my-listing">
       <div className="my-main">
         <Link to={`/listing/${l.id}`}>{fromName(l)} → {toName(l)}</Link>
-        <span className="muted small"> · {t(`kind.${l.kind}.one`)} · {dateText(l)} · {l.weightT} t · {l.id}</span>
+        <span className="muted small"> · {t(`kind.${l.kind}.one`)} · {dateText(l)} · {weightText(l)} · {l.id}</span>
         <div className="badges">
           {l.status === 'active' && !expiredNow && <span className="badge badge-neutral">{t('my.activeUntil', { date: formatDate(l.expiresAt) })}</span>}
           {(l.status === 'expired' || expiredNow) && <span className="badge badge-yellow">{t('my.expired', { date: formatDate(l.expiresAt) })}</span>}

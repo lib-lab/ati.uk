@@ -1,7 +1,8 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useSyncExternalStore, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { InactiveBanner } from './components/InactiveBanner';
 import { TopBar } from './components/TopBar';
+import { getLanguage, subscribeLanguage } from './i18n';
 import { AccountPage } from './pages/AccountPage';
 import { BalancePage } from './pages/BalancePage';
 import { CompaniesPage } from './pages/CompaniesPage';
@@ -17,6 +18,8 @@ import { RegisterPage } from './pages/RegisterPage';
 import { SearchPage } from './pages/SearchPage';
 
 export function App() {
+  // t() reads the current language; subscribing here re-renders the whole tree when it changes.
+  useSyncExternalStore(subscribeLanguage, getLanguage);
   return (
     <HashRouter>
       <TopBar />

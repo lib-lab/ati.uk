@@ -1,8 +1,12 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { AppState } from '../../domain/types';
+import { readableParams } from '../eventText';
+import { formatDate, formatDateTime, formatNumber } from '../format';
 import { en } from './en';
-import { t } from './index';
+import { setLanguage, t } from './index';
+import { ru } from './ru';
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -104,5 +108,51 @@ describe('i18n', () => {
   it('substitutes params and falls back to the key', () => {
     expect(t('events.score', { before: 1, after: 2 })).toBe('Score 1 → 2');
     expect(t('no.such.key')).toBe('no.such.key');
+  });
+
+  it('Russian has the same placeholders as English for every key', () => {
+    const params = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+    const differ = Object.keys(en).filter((k) => params(en[k as keyof typeof en]) !== params(ru[k as keyof typeof en]));
+    expect(differ).toEqual([]);
+  });
+
+  it('Russian translates every text (only symbols and route templates may stay the same)', () => {
+    const same = Object.keys(en).filter((k) => en[k as keyof typeof en] === ru[k as keyof typeof en]);
+    expect(same.sort()).toEqual(['listing.title', 'removal.undefined']);
+    expect(Object.values(ru).filter((v) => v.trim() === '')).toEqual([]);
+  });
+
+  it('switches the language of t() and falls back to the key', () => {
+    try {
+      setLanguage('ru');
+      expect(t('events.score', { before: 1, after: 2 })).toBe('Балл 1 → 2');
+      expect(t('no.such.key')).toBe('no.such.key');
+    } finally {
+      setLanguage('en');
+    }
+    expect(t('events.score', { before: 1, after: 2 })).toBe('Score 1 → 2');
+  });
+
+  it('shows roles, registry statuses and yes/no in event params as labels of the current language', () => {
+    const state = { companies: [] } as unknown as AppState;
+    expect(readableParams(state, { from: 'carrier', to: 'forwarder', status: 'liquidated', reports: 'yes' })).toEqual({ from: 'carrier', to: 'forwarder', status: 'liquidated', reports: 'yes' });
+    try {
+      setLanguage('ru');
+      expect(readableParams(state, { from: 'carrier', to: 'forwarder', status: 'liquidated', reports: 'yes' })).toEqual({ from: 'перевозчик', to: 'экспедитор', status: 'ликвидирована', reports: 'да' });
+    } finally {
+      setLanguage('en');
+    }
+  });
+
+  it('formats numbers and dates for the current language; Russian dates have no trailing "г."', () => {
+    const d = '2026-10-05T09:00:00.000Z';
+    expect([formatNumber(13.6), formatNumber(0.5, 2), formatDate(d)]).toEqual(['13.6', '0.50', '5 Oct 2026']);
+    try {
+      setLanguage('ru');
+      expect([formatNumber(13.6), formatNumber(0.5, 2), formatNumber(1068), formatDate(d)]).toEqual(['13,6', '0,50', '1068', '5 окт. 2026']);
+      expect(formatDateTime(d)).toBe('5 окт. 2026, 09:00');
+    } finally {
+      setLanguage('en');
+    }
   });
 });

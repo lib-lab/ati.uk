@@ -8,7 +8,7 @@ import type { BodyType, ListingKind, LoadingMethod, SearchFilters, SortKey, Subs
 import { store, useAppState } from '../../store/store';
 import { MarkBadges, ScoreChip } from '../components/OwnerSummary';
 import { t } from '../i18n';
-import { bodyText, dateText, distanceKm, fromName, ratePerKmText, rateText, toName } from '../listingFormat';
+import { bodyText, dateText, distanceKm, fromName, ratePerKmText, rateText, toName, volumeText, weightText } from '../listingFormat';
 import { getCompany, getRating } from '../selectors';
 
 const BODY_TYPES: BodyType[] = ['tent', 'box', 'reefer', 'flatbed', 'tanker', 'container', 'tipper'];
@@ -154,7 +154,7 @@ export function SearchPage() {
                 <div className="result-card-facts small">
                   <span className="nowrap">{dateText(l)}</span>
                   <span>{bodyText(l)}</span>
-                  <span className="nowrap">{l.weightT} t{l.volumeM3 !== undefined && ` · ${l.volumeM3} m³`}</span>
+                  <span className="nowrap">{weightText(l)}{volumeText(l) && ` · ${volumeText(l)}`}</span>
                   <span className="nowrap">{rateText(l)}{perKm && <span className="muted"> · {perKm}</span>}</span>
                 </div>
                 <div className="inline">
@@ -203,8 +203,8 @@ export function SearchPage() {
                     <td className="nowrap">{dateText(l)}</td>
                     <td>{bodyText(l)}</td>
                     <td className="num nowrap">
-                      {l.weightT} t
-                      {l.volumeM3 !== undefined && <div className="muted small">{l.volumeM3} m³</div>}
+                      {weightText(l)}
+                      {volumeText(l) && <div className="muted small">{volumeText(l)}</div>}
                     </td>
                     <td className="num nowrap">
                       {rateText(l)}

@@ -15,7 +15,7 @@ import { DisputeButton } from '../components/DisputeButton';
 import { FlagBadge, flagLabel } from '../components/FlagBadge';
 import { MarkBadges } from '../components/OwnerSummary';
 import { ClaimForm, ClaimReplyForm, ReplyForm, ReviewForm, SettleButton } from '../components/ReputationForms';
-import { formatDate, formatDateTime } from '../format';
+import { formatDate, formatDateTime, formatNumber } from '../format';
 import { t } from '../i18n';
 import { companyName, eventText, readableParams } from '../eventText';
 import { getCompany, getRating } from '../selectors';
@@ -126,14 +126,14 @@ function ComponentPanel({ state, companyId, c }: { state: AppState; companyId: s
         <span className="muted small num">
           {t('company.weights', { nominal: c.weight, effective: Math.round(c.effectiveWeight * 100) })}
         </span>
-        <span className="num small">{t('company.contribution', { points: c.contribution.toFixed(1) })}</span>
+        <span className="num small">{t('company.contribution', { points: formatNumber(c.contribution, 1) })}</span>
       </summary>
       <table className="breakdown">
         <tbody>
           {c.lines.map((l, i) => (
             <tr key={i}>
               <td>{t(l.key, readableParams(state, l.params))}</td>
-              <td className="num nowrap">{l.points === null ? '' : `${l.points >= 0 ? '+' : '−'}${Math.abs(l.points).toFixed(1)}`}</td>
+              <td className="num nowrap">{l.points === null ? '' : `${l.points >= 0 ? '+' : '−'}${formatNumber(Math.abs(l.points), 1)}`}</td>
             </tr>
           ))}
         </tbody>
@@ -165,11 +165,11 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
   const counted = countedReviews(state, review.targetId).some((r) => r.id === review.id);
   const w = reviewWeight(state, review, state.now);
   const factors = [
-    w.recency < 1 && t('company.review.factor.old', { w: w.recency }),
-    w.contactCost < 1 && t('company.review.factor.free', { w: w.contactCost }),
-    w.author < 1 && t('company.review.factor.author', { w: w.author.toFixed(2) }),
-    w.independence < 1 && t('company.review.factor.group', { w: w.independence }),
-    w.sharedDevice < 1 && t('company.review.factor.device', { w: w.sharedDevice }),
+    w.recency < 1 && t('company.review.factor.old', { w: formatNumber(w.recency) }),
+    w.contactCost < 1 && t('company.review.factor.free', { w: formatNumber(w.contactCost) }),
+    w.author < 1 && t('company.review.factor.author', { w: formatNumber(w.author, 2) }),
+    w.independence < 1 && t('company.review.factor.group', { w: formatNumber(w.independence) }),
+    w.sharedDevice < 1 && t('company.review.factor.device', { w: formatNumber(w.sharedDevice) }),
   ].filter(Boolean);
   return (
     <li className="list-item review">
@@ -182,7 +182,7 @@ function ReviewItem({ state, review }: { state: AppState; review: Review }) {
         {!review.voided && !counted && <span className="badge badge-yellow">{t('company.review.notCounted')}</span>}
         {counted && (
           <span className="badge badge-neutral" title={factors.join(' · ')}>
-            {t('company.review.weight', { w: w.total.toFixed(2) })}
+            {t('company.review.weight', { w: formatNumber(w.total, 2) })}
             {factors.length > 0 && `: ${factors.join(' · ')}`}
           </span>
         )}
@@ -238,7 +238,7 @@ function ClaimItem({ state, claim }: { state: AppState; claim: Claim }) {
           {formatDate(claim.createdAt)}
           {claim.resolvedAt && ` → ${formatDate(claim.resolvedAt)}`}
         </span>{' '}
-        {counting && <span className="badge badge-neutral">{t('company.claim.weight', { w: weight.toFixed(2) })}</span>}
+        {counting && <span className="badge badge-neutral">{t('company.claim.weight', { w: formatNumber(weight, 2) })}</span>}
         {claim.status === 'open' && !counting && <span className="badge badge-neutral">{t('company.claim.expired')}</span>}
       </div>
       <div>{claim.text}</div>
@@ -253,7 +253,7 @@ function ClaimItem({ state, claim }: { state: AppState; claim: Claim }) {
 }
 
 const fmt = (v: number | null) => (v === null ? t('owner.componentNA') : String(Math.round(v)));
-const signed = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
+const signed = (x: number) => `${x >= 0 ? '+' : '−'}${formatNumber(Math.abs(x), 1)}`;
 
 /** Own profile: change the role; it decides what the company can post from now on. */
 function RoleChange({ current }: { current: Role }) {

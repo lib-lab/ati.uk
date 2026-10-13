@@ -15,7 +15,7 @@ import { activeClaims } from '../../domain/rules/rating';
 import { MODERATOR_ID, type AppState, type Complaint, type Dispute } from '../../domain/types';
 import { store, useAppState } from '../../store/store';
 import { FlagBadge } from '../components/FlagBadge';
-import { formatDate, formatMoney } from '../format';
+import { formatDate, formatMoney, formatNumber } from '../format';
 import { t } from '../i18n';
 import { companyName, eventText } from '../eventText';
 import { fromName, toName } from '../listingFormat';
@@ -65,7 +65,7 @@ export function ModerationPage() {
 function refundPreview(state: AppState, c: Complaint): string {
   const plan = refundPlan(state, c, state.now);
   if (plan.kind === 'none') return t('mod.refundNone.outdated');
-  if (plan.kind === 'wait') return t('mod.refundWait', { weight: plan.weight.toFixed(1), needed: plan.needed });
+  if (plan.kind === 'wait') return t('mod.refundWait', { weight: formatNumber(plan.weight, 1), needed: plan.needed });
   const own = refundFor(state, findAccess(state, c.reporterId, c.targetId), state.now);
   const ownText = own.kind === 'money' ? t('mod.refundMoney', { amount: formatMoney(own.amount) })
     : own.kind === 'free_quota' ? t('mod.refundQuota') : own.kind === 'package' ? t('mod.refundPackage') : t(`mod.refundNone.${own.reason}`);

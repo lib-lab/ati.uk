@@ -10,7 +10,7 @@ export function ThemeSwitch() {
     <button
       type="button"
       id="theme"
-      className="theme-switch"
+      className="toggle theme-switch"
       role="switch"
       aria-checked={dark}
       aria-label={t('theme.dark')}
@@ -22,7 +22,7 @@ export function ThemeSwitch() {
       }}
     >
       <SunIcon />
-      <span className="theme-switch-track" aria-hidden="true"><span className="theme-switch-knob" /></span>
+      <span className="toggle-track" aria-hidden="true"><span className="toggle-knob" /></span>
       <MoonIcon />
     </button>
   );

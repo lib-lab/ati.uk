@@ -1,7 +1,7 @@
 // Human-readable description of saved search filters (subscriptions page).
 import { getCity } from '../domain/geo/cities';
 import type { SearchFilters } from '../domain/types';
-import { formatDate } from './format';
+import { formatDate, formatNumber } from './format';
 import { t } from './i18n';
 
 function place(cityId: string, radius?: number): string {
@@ -11,8 +11,8 @@ function place(cityId: string, radius?: number): string {
 
 function range(min: number | undefined, max: number | undefined, unit: string): string | null {
   if (min === undefined && max === undefined) return null;
-  if (min !== undefined && max !== undefined) return `${min}–${max} ${unit}`;
-  return min !== undefined ? t('filters.atLeast', { value: `${min} ${unit}` }) : t('filters.atMost', { value: `${max} ${unit}` });
+  if (min !== undefined && max !== undefined) return `${formatNumber(min)}–${formatNumber(max)} ${unit}`;
+  return min !== undefined ? t('filters.atLeast', { value: `${formatNumber(min)} ${unit}` }) : t('filters.atMost', { value: `${formatNumber(max!)} ${unit}` });
 }
 
 export function filtersText(f: SearchFilters): string {
@@ -26,9 +26,9 @@ export function filtersText(f: SearchFilters): string {
       : f.dateFrom ? t('filters.dateFrom', { date: formatDate(f.dateFrom) }) : t('filters.dateTo', { date: formatDate(f.dateTo!) }));
   }
   if (f.bodyTypes?.length) parts.push(f.bodyTypes.map((b) => t(`body.${b}`)).join(', '));
-  const weight = range(f.weightMin, f.weightMax, 't');
+  const weight = range(f.weightMin, f.weightMax, t('unit.t'));
   if (weight) parts.push(`${f.kind === 'cargo' ? t('filters.weight') : t('filters.capacity')} ${weight}`);
-  const volume = range(f.volumeMin, f.volumeMax, 'm³');
+  const volume = range(f.volumeMin, f.volumeMax, t('unit.m3'));
   if (volume) parts.push(`${t('filters.volume')} ${volume}`);
   if (f.loadingMethods?.length) parts.push(`${t('filters.loading')} ${f.loadingMethods.map((m) => t(`loading.${m}`).toLowerCase()).join(', ')}`);
   if (f.minRating !== undefined) parts.push(t('filters.minRating', { min: f.minRating }));
