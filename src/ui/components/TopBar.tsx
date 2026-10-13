@@ -14,6 +14,7 @@ import { store, useAppState } from '../../store/store';
 import { formatDate, formatDateTime, formatMoney } from '../format';
 import { t } from '../i18n';
 import { APP_TIME_PROCESSES } from '../timeProcesses';
+import { LanguageSwitch } from './LanguageSwitch';
 import { ThemeSwitch } from './ThemeSwitch';
 
 const SHIFTS: { key: string; to: (now: IsoDate) => IsoDate }[] = [
@@ -111,6 +112,7 @@ export function TopBar() {
           ) : (
             <span className="muted">{t('role.moderator')}</span>
           )}
+          <LanguageSwitch />
           <ThemeSwitch />
         </div>
       </div>

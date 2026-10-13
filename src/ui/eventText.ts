@@ -1,18 +1,27 @@
 // Human-readable texts for stored events and notifications.
 import type { AppState, EventLogEntry, Notification } from '../domain/types';
-import { formatDateTime, formatMoney } from './format';
+import { formatDateTime, formatMoney, formatNumber } from './format';
 import { t } from './i18n';
 
 type Params = Record<string, string | number>;
 
-/** Company ids become names, `amount` (cents) becomes money, ISO dates become dates. */
+const ROLES = new Set(['shipper', 'carrier', 'forwarder']);
+
+/**
+ * Company ids become names, `amount` (cents) becomes money, ISO dates become dates,
+ * roles, registry statuses and yes/no become their labels.
+ */
 export function readableParams(state: AppState, params: Params): Params {
   const out: Params = {};
   for (const [k, v] of Object.entries(params)) {
     if (k === 'amount' && typeof v === 'number') out[k] = formatMoney(v);
     else if (k === 'fields' && typeof v === 'string') out[k] = v.split(', ').map((f) => t(`listing.changeField.${f}`).toLowerCase()).join('; ');
     else if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) out[k] = formatDateTime(v);
+    else if (typeof v === 'string' && ROLES.has(v)) out[k] = t(`role.${v}`).toLowerCase();
+    else if (v === 'yes' || v === 'no') out[k] = t(`common.${v}`).toLowerCase();
+    else if (k === 'status' && typeof v === 'string' && v) out[k] = t(`registryStatus.${v}`).toLowerCase();
     else if (typeof v === 'string') out[k] = companyName(state, v) ?? v;
+    else if (typeof v === 'number' && !Number.isInteger(v)) out[k] = formatNumber(v);
     else out[k] = v;
   }
   return out;

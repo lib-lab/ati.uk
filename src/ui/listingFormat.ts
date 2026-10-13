@@ -3,7 +3,7 @@ import { getCity } from '../domain/geo/cities';
 import { roadDistanceKm } from '../domain/geo/distance';
 import { ratePerKm } from '../domain/rules/search';
 import type { PublicListing as Listing } from '../domain/rules/contactPrivacy';
-import { formatDate, formatMoney } from './format';
+import { formatDate, formatMoney, formatNumber } from './format';
 import { t } from './i18n';
 
 export function fromName(l: Listing): string {
@@ -36,4 +36,12 @@ export function ratePerKmText(l: Listing): string | null {
 
 export function bodyText(l: Listing): string {
   return l.bodyTypes.map((b) => t(`body.${b}`)).join(', ');
+}
+
+export function weightText(l: Listing): string {
+  return `${formatNumber(l.weightT)} ${t('unit.t')}`;
+}
+
+export function volumeText(l: Listing): string | null {
+  return l.volumeM3 === undefined ? null : `${formatNumber(l.volumeM3)} ${t('unit.m3')}`;
 }
