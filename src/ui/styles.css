@@ -54,7 +54,7 @@ a.btn:hover { text-decoration: none; }
 
 /* ---- top bar and test tools ---- */
 .topbar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-xl);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg);
   padding: var(--space-md) var(--space-xl); border-bottom: var(--border-width) solid var(--border); background: var(--bg);
 }
 .brand { display: inline-flex; align-items: center; justify-content: center; min-width: var(--control-height); min-height: var(--control-height); color: var(--text); border-radius: var(--radius); }
@@ -63,6 +63,9 @@ a.btn:hover { text-decoration: none; }
 .nav a { color: var(--muted); }
 .nav a.active { color: var(--accent-text); }
 .topbar-account { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-lg); margin-left: auto; }
+/* "Free contacts" in two lines with the number beside it: two caption lines are no taller than the toggles. */
+.topbar-stat { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.topbar-stat-label { width: min-content; }
 .toolbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg);
   padding: var(--space-sm) var(--space-xl); border-bottom: var(--border-width) solid var(--border); background: var(--bg-subtle); font-size: var(--font-size-caption);

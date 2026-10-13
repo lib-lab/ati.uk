@@ -95,9 +95,9 @@ export function TopBar() {
               <span>
                 <span className="muted">{t('topbar.balance')}</span> {formatMoney(balanceOf(state.transactions, actor.id))}
               </span>
-              <span>
-                <span className="muted">{t('topbar.freeContacts')}</span> {freeContactsLeft(state, actor.id, state.now)}/
-                {CONFIG.freeContactsPerMonth}
+              <span className="topbar-stat">
+                <span className="muted topbar-stat-label">{t('topbar.freeContacts')}</span>
+                <span>{freeContactsLeft(state, actor.id, state.now)}/{CONFIG.freeContactsPerMonth}</span>
               </span>
               {(() => {
                 const pkg = activePackage(state, actor.id, state.now);
