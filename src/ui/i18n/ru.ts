@@ -11,7 +11,7 @@ export const ru: Record<MessageKey, string> = {
   'nav.post': 'Разместить объявление',
   'nav.myListings': 'Мои объявления',
   'nav.notifications': 'Уведомления',
-  'nav.events': 'Лог',
+  'nav.events': 'Журнал событий',
   'nav.moderation': 'Модерация',
 
   'topbar.actingAs': 'Действую как',
