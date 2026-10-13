@@ -65,8 +65,8 @@ export function TopBar() {
   return (
     <header>
       <div className="topbar">
-        <Link to="/" className="brand">
-          {t('app.title')} <span className="muted small">{t('app.prototypeBadge')}</span>
+        <Link to="/" className="brand" title={t('app.homeHint')} aria-label={t('app.homeHint')}>
+          <HomeIcon />
         </Link>
         <nav className="nav">
           <NavLink to="/search">{t('nav.search')}</NavLink>
@@ -178,5 +178,14 @@ export function TopBar() {
         </span>
       </div>
     </header>
+  );
+}
+
+// Geometry in the 24-unit viewBox; the size comes from styles (--icon-size), like the theme switch icons.
+function HomeIcon() {
+  return (
+    <svg className="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

@@ -1,7 +1,6 @@
 // All user-facing strings. Sentence case. Placeholders: {name}.
 export const en = {
-  'app.title': 'Freight board',
-  'app.prototypeBadge': 'prototype',
+  'app.homeHint': 'Freight board prototype: demo data, test payments and registry. Home: search',
 
   'nav.search': 'Search',
   'nav.companies': 'Log in as',

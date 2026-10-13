@@ -57,7 +57,8 @@ a.btn:hover { text-decoration: none; }
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-xl);
   padding: var(--space-md) var(--space-xl); border-bottom: var(--border-width) solid var(--border); background: var(--bg);
 }
-.brand { font-weight: var(--font-weight-bold); color: var(--text); }
+.brand { display: inline-flex; align-items: center; justify-content: center; min-width: var(--control-height); min-height: var(--control-height); color: var(--text); border-radius: var(--radius); }
+.brand-icon { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
 .nav { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); }
 .nav a { color: var(--muted); }
 .nav a.active { color: var(--accent-text); }

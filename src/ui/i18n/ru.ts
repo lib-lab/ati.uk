@@ -3,8 +3,7 @@
 import type { MessageKey } from './en';
 
 export const ru: Record<MessageKey, string> = {
-  'app.title': 'Биржа грузов',
-  'app.prototypeBadge': 'прототип',
+  'app.homeHint': 'Прототип биржи грузов: демо-данные, тестовые платежи и реестр. На главную — поиск',
 
   'nav.search': 'Поиск',
   'nav.companies': 'Войти как',
@@ -12,7 +11,7 @@ export const ru: Record<MessageKey, string> = {
   'nav.post': 'Разместить объявление',
   'nav.myListings': 'Мои объявления',
   'nav.notifications': 'Уведомления',
-  'nav.events': 'Журнал событий',
+  'nav.events': 'Лог',
   'nav.moderation': 'Модерация',
 
   'topbar.actingAs': 'Действую как',
